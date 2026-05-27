@@ -1,0 +1,65 @@
+================================================================================
+SPRINT 03 - QUALIDADE DE CÓDIGO
+================================================================================
+Prioridade: 🟡 MÉDIA
+Status:     ⬜ PENDENTE
+Depende de: Sprint 02
+
+================================================================================
+DESCRIÇÃO
+================================================================================
+Refatorar app.py para melhorar qualidade, robustez e boas práticas:
+type hints, constantes, validação de entrada, tratamento de erros,
+streaming, rate limiting e caching.
+
+================================================================================
+PROMPT / INSTRUÇÕES PARA EXECUÇÃO
+================================================================================
+1. Adicionar type hints em todas as funções:
+   - def main() -> None:
+   - Criar constantes no topo do arquivo (fora da função main)
+
+2. Extrair valores hardcoded para constantes no topo do arquivo:
+   OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+   DEFAULT_MODEL = "openrouter/auto"
+   DEFAULT_MAX_TOKENS = 500
+   DEFAULT_TEMPERATURE = 0.7
+   APP_TITLE = "Essência Espírita - Textos Simples"
+   GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
+
+3. Adicionar validação de entrada do usuário:
+   - Sanitizar theme: strip(), remover caracteres inválidos para nome de arquivo
+   - Limitar tamanho máximo (ex: 200 caracteres)
+   - Validar se theme não está vazio APÓS sanitização
+
+4. Implementar proteção contra múltiplos cliques:
+   - Usar st.session_state["generating"] para controlar estado
+   - Desabilitar botão "Gerar Texto" enquanto estiver gerando
+
+5. Implementar streaming da resposta:
+   - Usar stream=True na chamada da API
+   - Usar st.write_stream() para mostrar tokens em tempo real
+
+6. Melhorar tratamento de erros:
+   - Logar erro completo no console (print ou logging)
+   - Mostrar apenas mensagem amigável ao usuário
+   - Tratar exceções específicas primeiro, genéricas por último
+
+7. Implementar cache simples para consultas repetidas:
+   - Usar @st.cache_data ou st.session_state para cachear
+     resultados do mesmo tema dentro da mesma sessão
+
+================================================================================
+ARQUIVOS AFETADOS
+================================================================================
+  app.py  -> Refatoração completa com todas as melhorias acima
+
+================================================================================
+COMPORTAMENTO ESPERADO APÓS SPRINT
+================================================================================
+- Botão desabilita durante carregamento para evitar chamadas duplicadas
+- Texto aparece conforme é gerado (streaming)
+- Caracteres especiais no tema não quebram o download
+- Erros são tratados adequadamente sem vazar detalhes internos
+- Consultas repetidas ao mesmo tema usam cache
+================================================================================

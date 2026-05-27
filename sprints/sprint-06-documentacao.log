@@ -1,0 +1,58 @@
+================================================================================
+SPRINT 06 - DOCUMENTAÇÃO E LICENCIAMENTO
+================================================================================
+Prioridade: 🔵 BAIXA
+Status:     ⬜ PENDENTE
+Depende de: Sprint 02 (renomeação readme -> README)
+
+================================================================================
+DESCRIÇÃO
+================================================================================
+Completar a documentação do projeto com README detalhado, licença,
+e guia de contribuição.
+
+================================================================================
+PROMPT / INSTRUÇÕES PARA EXECUÇÃO
+================================================================================
+1. Reescrever README.md com seções completas:
+   - Título e descrição do projeto
+   - Tech stack (Python, Streamlit, OpenRouter)
+   - Pré-requisitos (Python 3.12+, pip)
+   - Passo a passo de instalação (clone, venv, pip install)
+   - Como obter chave OpenRouter
+   - Como configurar variáveis de ambiente (.env)
+   - Como executar (streamlit run app.py)
+   - Funcionalidades (incluindo as novas da Sprint 05)
+   - Estrutura do projeto (árvore de diretórios)
+   - Tecnologias utilizadas
+   - Licença
+
+2. Criar arquivo LICENSE:
+   - Sugerir MIT License (padrão para projetos open source)
+   - Ano: 2025
+   - Autor: (deixar placeholder ou nome do criador)
+
+3. Criar CONTRIBUTING.md:
+   - Como relatar issues
+   - Como propor melhorias
+   - Padrão de código (PEP 8, type hints)
+   - Como rodar testes
+   - Processo de PR
+
+4. Garantir que NENHUMA chave de API ou informação sensível esteja
+   presente em qualquer arquivo de documentação.
+
+================================================================================
+ARQUIVOS AFETADOS
+================================================================================
+  README.md        -> Reescrever com conteúdo completo (sem chave de API!)
+  LICENSE          -> CRIAR (MIT)
+  CONTRIBUTING.md  -> CRIAR
+
+================================================================================
+OBSERVAÇÕES
+================================================================================
+- NUNCA colocar chaves de API ou senhas em arquivos de documentação.
+- README deve ser auto-suficiente para um novo desenvolvedor começar.
+- Mantenha README em português (público alvo do app é brasileiro).
+================================================================================

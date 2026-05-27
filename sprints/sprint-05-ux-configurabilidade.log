@@ -1,0 +1,59 @@
+================================================================================
+SPRINT 05 - UX E CONFIGURABILIDADE
+================================================================================
+Prioridade: 🔵 BAIXA
+Status:     ⬜ PENDENTE
+Depende de: Sprint 03
+
+================================================================================
+DESCRIÇÃO
+================================================================================
+Melhorar a experiência do usuário e tornar parâmetros da aplicação
+configuráveis pela interface lateral (sidebar), permitindo que o usuário
+controle modelo, temperatura, tokens e outras opções.
+
+================================================================================
+PROMPT / INSTRUÇÕES PARA EXECUÇÃO
+================================================================================
+1. Adicionar seletor de modelo na sidebar:
+   - st.sidebar.selectbox() com opções:
+     "openrouter/auto" (padrão)
+     "openai/gpt-4o-mini"
+     "openai/gpt-4o"
+     "anthropic/claude-sonnet"
+     "google/gemini-flash"
+   - Valor padrão: "openrouter/auto"
+
+2. Adicionar slider para temperatura:
+   - st.sidebar.slider("Temperatura", 0.0, 2.0, 0.7, 0.1)
+   - Tooltip explicando que valores mais altos geram textos mais criativos
+
+3. Adicionar slider para max_tokens:
+   - st.sidebar.slider("Máximo de tokens", 100, 2000, 500, 50)
+   - Tooltip explicando que controla o tamanho máximo do texto gerado
+
+4. Adicionar campo para URL base da API (avançado):
+   - st.sidebar.text_input() com valor padrão do .env ou constante
+   - Útil para usuários que usam proxies ou APIs compatíveis
+
+5. Remover the OpenRouter headers do escopo da função (já extraídos
+   como constantes na Sprint 03) e mantê-los na sidebar para customização.
+
+6. Melhorar feedback visual:
+   - Mostrar indicador de progresso durante geração (já tem spinner)
+   - Adicionar métrica de tempo de resposta (quanto tempo levou)
+   - Mostrar quantidade de tokens usados (se retornado pela API)
+
+================================================================================
+ARQUIVOS AFETADOS
+================================================================================
+  app.py  -> Adicionar novos controles na sidebar e integrá-los à chamada API
+
+================================================================================
+COMPORTAMENTO ESPERADO APÓS SPRINT
+================================================================================
+- Usuário pode escolher modelo, temperatura e limite de tokens na sidebar
+- Configurações persistem durante a sessão (st.session_state)
+- Feedback mais rico sobre tempo e tokens da resposta
+- URL base configurável para flexibilidade
+================================================================================

@@ -1,0 +1,133 @@
+================================================================================
+   ███████╗ █████╗  ██████╗███████╗██╗██╗   ██╗██╗     ██████╗ ███████╗
+   ██╔════╝██╔══██╗██╔════╝██╔════╝██║██║   ██║██║     ██╔══██╗██╔════╝
+   ███████╗███████║██║     █████╗  ██║██║   ██║██║     ██████╔╝█████╗  
+   ╚════██║██╔══██║██║     ██╔══╝  ██║╚██╗ ██╔╝██║     ██╔══██╗██╔══╝  
+   ███████║██║  ██║╚██████╗███████╗██║ ╚████╔╝ ███████╗██║  ██║███████╗
+   ╚══════╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚═╝  ╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝
+================================================================================
+   ESSÊNCIA ESPÍRITA - PLANO DE MELHORIAS
+   Gerado em: 27/05/2026
+   Total de Sprints: 6
+================================================================================
+
+INDICE
+================================================================================
+  Sprint 01 - Segurança (Crítico) ................... sprints/sprint-01-seguranca.log
+  Sprint 02 - Infraestrutura ........................ sprints/sprint-02-infraestrutura.log
+  Sprint 03 - Qualidade de Código .................. sprints/sprint-03-qualidade-codigo.log
+  Sprint 04 - Testes ............................... sprints/sprint-04-testes.log
+  Sprint 05 - UX e Configurabilidade ............... sprints/sprint-05-ux-configurabilidade.log
+  Sprint 06 - Documentação ......................... sprints/sprint-06-documentacao.log
+
+================================================================================
+DIAGRAMA DE DEPENDÊNCIAS
+================================================================================
+
+   Sprint 01 (Segurança)
+       │
+       ▼
+   Sprint 02 (Infraestrutura)
+       │
+       ├────────────────────┐
+       ▼                    ▼
+   Sprint 03            Sprint 06
+   (Qualidade)         (Documentação)
+       │
+       ├────────────────────┐
+       ▼                    ▼
+   Sprint 04            Sprint 05
+   (Testes)             (UX/Config)
+
+================================================================================
+RESUMO DOS PROBLEMAS ENCONTRADOS
+================================================================================
+
+🔴 CRÍTICO (2)
+  [C1] Chave de API exposta em readme.md e no histórico Git
+  [C2] Arquivo .env rastreado pelo Git
+
+🟠 ALTA (2)
+  [A1] Nenhum teste automatizado
+  [A2] Dependências sem versão fixa
+
+🟡 MÉDIA (4)
+  [M1] Sem validação de entrada do usuário
+  [M2] Erros vazam detalhes internos para o usuário
+  [M3] Sem proteção contra múltiplos cliques no botão
+  [M4] Sem streaming na resposta da API
+
+🔵 BAIXA (12)
+  [B1]  URL base da OpenRouter hardcoded
+  [B2]  Modelo hardcoded (openrouter/auto)
+  [B3]  max_tokens e temperature hardcoded
+  [B4]  Headers HTTP hardcoded
+  [B5]  Sem type hints
+  [B6]  Sem validação de tamanho do input
+  [B7]  Sem cache para consultas repetidas
+  [B8]  .gitignore incompleto (falta .streamlit/)
+  [B9]  Sem .python-version
+  [B10] readme.md sem instruções detalhadas de setup
+  [B11] readme.md em minúsculo (convenção: README.md)
+  [B12] Sem licença
+
+================================================================================
+PRIORIZAÇÃO vs SPRINTS
+================================================================================
+
+Sprint 01: C1, C2
+Sprint 02: A2, B8, B9, B11
+Sprint 03: M1, M2, M3, M4, B1, B4, B5, B6, B7
+Sprint 04: A1
+Sprint 05: B1, B2, B3
+Sprint 06: B10, B11, B12
+
+================================================================================
+ESTRUTURA DO PROJETO (APÓS MELHORIAS)
+================================================================================
+
+Temas/
+├── .env                  # Chave de API (local, não rastreado)
+├── .gitignore            # Ignorar pycache, .env, .streamlit/
+├── .python-version       # Versão do Python
+├── README.md             # Documentação completa
+├── LICENSE               # Licença MIT
+├── CONTRIBUTING.md       # Guia de contribuição
+├── requirements.txt      # Dependências com versões fixas
+├── pytest.ini            # Configuração do pytest
+├── app.py                # Aplicação principal
+├── sprints/
+│   ├── sprint-01-seguranca.log
+│   ├── sprint-02-infraestrutura.log
+│   ├── sprint-03-qualidade-codigo.log
+│   ├── sprint-04-testes.log
+│   ├── sprint-05-ux-configurabilidade.log
+│   ├── sprint-06-documentacao.log
+│   └── .log              # <- Este arquivo (master log)
+└── tests/
+    ├── __init__.py
+    ├── conftest.py
+    └── test_app.py
+
+================================================================================
+INSTRUÇÕES DE USO
+================================================================================
+Cada sprint contém um "PROMPT" detalhado que pode ser usado como
+instrução para uma IA (ex: Claude, OpenCode) executar as melhorias.
+
+Ordem recomendada de execução:
+  1. Sprint 01 (obrigatório - segurança)
+  2. Sprint 02 (obrigatório - infraestrutura)
+  3. Sprint 03 (obrigatório - qualidade)
+  4. Sprint 04 (recomendado - testes)
+  5. Sprint 05 (opcional - UX)
+  6. Sprint 06 (opcional - docs)
+
+Para executar um sprint:
+  > Leia o arquivo .log da sprint desejada
+  > Siga o PROMPT como instrução para a IA/desenvolvedor
+  > Marque o Status como CONCLUÍDO após finalizar
+
+================================================================================
+FIM DO PLANO DE MELHORIAS
+================================================================================

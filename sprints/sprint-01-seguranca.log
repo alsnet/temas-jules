@@ -1,0 +1,54 @@
+================================================================================
+SPRINT 01 - SEGURANÇA (CRÍTICO)
+================================================================================
+Prioridade: 🔴 CRÍTICA
+Status:     ⬜ PENDENTE
+Depende de: Nenhuma
+
+================================================================================
+DESCRIÇÃO
+================================================================================
+Remover credenciais vazadas do repositório Git e garantir que chaves de API
+não sejam expostas novamente. A chave OpenRouter está presente em:
+  - readme.md (linha 11)
+  - .env (linha 1, já rastreado pelo Git)
+  - Histórico do Git (commit 4db5e9a)
+
+================================================================================
+PROMPT / INSTRUÇÕES PARA EXECUÇÃO
+================================================================================
+1. Remover a linha da chave de API do readme.md:
+   - Apagar a linha 11: "API=[REDACTED]"
+
+2. Remover .env do rastreamento Git (sem deletar o arquivo local):
+   - git rm --cached .env
+
+3. Verificar se .env está no .gitignore (já deve estar):
+   - Confirmar que a linha ".env" existe em .gitignore
+
+4. Fazer um novo commit removendo os arquivos do tracking:
+   - git add -A
+   - git commit -m "Remove chave de API vazada e .env do tracking"
+
+5. Rotacionar a chave no OpenRouter (fora do repositório):
+   - Acessar https://openrouter.ai/keys e gerar uma nova chave
+   - Atualizar o .env local com a nova chave
+
+================================================================================
+ARQUIVOS AFETADOS
+================================================================================
+  readme.md       -> Remover linha 11 (chave exposta)
+  .env            -> Remover do tracking Git (git rm --cached)
+  .gitignore      -> Verificar se contém ".env" (já deve conter)
+  Histórico Git   -> Chave permanece no commit antigo; considerar force-push
+                     apenas se repo for privado e time souber do risco
+
+================================================================================
+OBSERVAÇÕES
+================================================================================
+- A chave vazada é: [REDACTED]
+- Considerar usar git filter-branch ou BFG Repo-Cleaner para remover
+  a chave do histórico se o repositório for público.
+- A partir de agora, NUNCA colocar chaves de API em arquivos de documentação
+  ou commits.
+================================================================================

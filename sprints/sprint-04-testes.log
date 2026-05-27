@@ -1,0 +1,69 @@
+================================================================================
+SPRINT 04 - TESTES AUTOMATIZADOS
+================================================================================
+Prioridade: 🟠 ALTA
+Status:     ⬜ PENDENTE
+Depende de: Sprint 03
+
+================================================================================
+DESCRIÇÃO
+================================================================================
+Criar suite de testes automatizados usando pytest para garantir que o
+código funcione corretamente e evitar regressões.
+
+================================================================================
+PROMPT / INSTRUÇÕES PARA EXECUÇÃO
+================================================================================
+1. Adicionar pytest ao requirements.txt:
+   pytest>=7,<9
+   pytest-mock>=3,<4
+
+2. Criar diretório tests/ com:
+   tests/__init__.py   (arquivo vazio)
+   tests/conftest.py   (configuração e fixtures)
+
+3. Criar tests/test_app.py com os seguintes testes:
+
+   a) Teste de validação de entrada:
+      - theme vazio -> deve mostrar aviso
+      - theme com caracteres especiais -> deve sanitizar corretamente
+      - theme muito longo -> deve truncar ou avisar
+
+   b) Teste de configuração do cliente OpenAI:
+      - Verificar se cliente é criado com base_url correta
+      - Verificar se api_key é passada corretamente
+
+   c) Teste de tratamento de erros:
+      - Simular erro 429 (insufficient_quota) -> mensagem específica
+      - Simular erro 401 (api_key inválida) -> mensagem específica
+      - Simular erro genérico -> mensagem amigável (não vazar detalhes)
+
+   d) Teste de cache:
+      - Mesmo tema chamado duas vezes -> segunda chamada usa cache
+      - Temas diferentes -> não usa cache
+
+   e) Teste de rate limiting:
+      - Botão desabilitado durante geração
+      - Botão reabilitado após conclusão
+
+4. Adicionar arquivo pytest.ini ou pyproject.toml com config do pytest:
+   [pytest]
+   testpaths = tests
+   python_files = test_*.py
+
+================================================================================
+ARQUIVOS AFETADOS
+================================================================================
+  requirements.txt    -> Adicionar pytest e pytest-mock
+  tests/__init__.py   -> CRIAR
+  tests/conftest.py   -> CRIAR
+  tests/test_app.py   -> CRIAR
+  pytest.ini          -> CRIAR (opcional, pode ir no pyproject.toml)
+
+================================================================================
+COMANDOS PARA EXECUTAR TESTES
+================================================================================
+  pytest -v                    (modo verboso)
+  pytest --cov=.               (com cobertura, se pytest-cov instalado)
+  pytest tests/test_app.py -v  (teste específico)
+================================================================================

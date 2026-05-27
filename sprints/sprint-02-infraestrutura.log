@@ -1,0 +1,53 @@
+================================================================================
+SPRINT 02 - INFRAESTRUTURA E CONFIGURAÇÃO
+================================================================================
+Prioridade: 🟠 ALTA
+Status:     ⬜ PENDENTE
+Depende de: Sprint 01
+
+================================================================================
+DESCRIÇÃO
+================================================================================
+Organizar a infraestrutura do projeto: fixar versões de dependências,
+adicionar .python-version, melhorar .gitignore, e padronizar arquivos
+de configuração.
+
+================================================================================
+PROMPT / INSTRUÇÕES PARA EXECUÇÃO
+================================================================================
+1. Fixar versões no requirements.txt com intervalos seguros:
+   streamlit>=1.28,<2
+   openai>=1.0,<2
+   python-dotenv>=1.0,<2
+
+2. Criar .python-version:
+   Conteúdo: "3.12" (ou versão utilizada no desenvolvimento)
+
+3. Melhorar .gitignore adicionando entradas comuns:
+   .streamlit/
+   *.pyc
+   .DS_Store
+   venv/
+   .venv/
+   *.log
+
+4. Renomear readme.md para README.md:
+   git mv readme.md README.md
+
+5. Garantir que o arquivo .env não está sendo rastreado:
+   Confirmar git rm --cached já foi feito na Sprint 01
+
+================================================================================
+ARQUIVOS AFETADOS
+================================================================================
+  requirements.txt  -> Substituir linhas soltas por versões fixadas
+  .python-version   -> CRIAR novo arquivo
+  .gitignore         -> Adicionar novas entradas
+  readme.md         -> Renomear para README.md
+
+================================================================================
+COMANDOS ÚTEIS
+================================================================================
+  git mv readme.md README.md
+  python --version  (para descobrir a versão atual)
+================================================================================

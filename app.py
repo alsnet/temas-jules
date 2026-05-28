@@ -44,7 +44,8 @@ def build_system_prompt() -> str:
         "3. Utilize ortografia e gramática da língua portuguesa atualizadas.\n"
         "4. O texto deve ser resumido e direto ao ponto.\n"
         "5. Não utilize termos complexos sem explicá-los de forma simples.\n"
-        "6. Mantenha um tom acolhedor e esclarecedor."
+        "6. Mantenha um tom acolhedor e esclarecedor.\n"
+        "7. Escreva o texto EM PRIMEIRA PESSOA, como se você mesmo estivesse explicando o conceito."
     )
 
 

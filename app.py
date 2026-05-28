@@ -65,6 +65,14 @@ def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int
             yield content
 
 
+def map_api_error(e: Exception) -> str:
+    if "insufficient_quota" in str(e) or "429" in str(e):
+        return "Erro: Limite de uso atingido ou falta de créditos no OpenRouter. Verifique sua conta."
+    if "api_key" in str(e).lower() or "401" in str(e):
+        return "Erro: A chave da API do OpenRouter fornecida parece ser inválida."
+    return "Ocorreu um erro inesperado ao gerar o texto. Tente novamente mais tarde."
+
+
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🕊️")
 
@@ -128,12 +136,7 @@ def main() -> None:
 
             except Exception as e:
                 logger.error(f"Erro ao gerar texto para tema '{theme}': {e}", exc_info=True)
-                if "insufficient_quota" in str(e) or "429" in str(e):
-                    st.error("Erro: Limite de uso atingido ou falta de créditos no OpenRouter. Verifique sua conta.")
-                elif "api_key" in str(e).lower() or "401" in str(e):
-                    st.error("Erro: A chave da API do OpenRouter fornecida parece ser inválida.")
-                else:
-                    st.error("Ocorreu um erro inesperado ao gerar o texto. Tente novamente mais tarde.")
+                st.error(map_api_error(e))
             finally:
                 st.session_state.generating = False
 

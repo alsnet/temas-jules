@@ -177,6 +177,13 @@ def render_settings() -> dict:
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🕊️")
 
+    st.markdown("""
+        <style>
+        [data-testid="InputInstructions"],
+        .stTextInput p:last-child { display: none !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
     st.title("🕊️ Temas Espíritas")
     st.subheader("Gerador de textos resumidos com vocabulário simples, baseados na Doutrina Kardecista")
 

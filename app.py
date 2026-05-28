@@ -4,7 +4,7 @@ import os
 import re
 import time
 import logging
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key, get_key
 
 load_dotenv()
 
@@ -126,12 +126,16 @@ def render_settings() -> dict:
             )
 
         st.markdown("##### API")
+        if "api_key" not in st.session_state:
+            st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
+
         api_key = st.text_input(
             "OpenRouter API Key",
             type="password",
-            value=os.getenv("OPENROUTER_API_KEY", ""),
-            help="Sua chave de API do OpenRouter.",
+            value=st.session_state.api_key,
+            help="Sua chave de API do OpenRouter persistida entre sessões.",
         )
+        st.session_state.api_key = api_key
 
         with st.expander("Avançado"):
             base_url = st.text_input(
@@ -177,6 +181,11 @@ def main() -> None:
     st.subheader("Gerador de textos resumidos com vocabulário simples, baseados na Doutrina Kardecista")
 
     config = render_settings()
+
+    saved_key = os.getenv("OPENROUTER_API_KEY", "")
+    if config["api_key"] and config["api_key"] != saved_key:
+        set_key(".env", "OPENROUTER_API_KEY", config["api_key"])
+        os.environ["OPENROUTER_API_KEY"] = config["api_key"]
 
     if not config["api_key"]:
         st.info("🔑 Abra as **Configurações** acima e insira sua chave do OpenRouter para começar.")

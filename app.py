@@ -179,8 +179,16 @@ def main() -> None:
 
     st.markdown("""
         <style>
-        [data-testid="InputInstructions"],
-        .stTextInput p:last-child { display: none !important; }
+        [data-testid="InputInstructions"] {
+            font-size: 0 !important;
+            line-height: 0 !important;
+        }
+        [data-testid="InputInstructions"]::after {
+            content: "Pressione Enter para aplicar";
+            font-size: 12px !important;
+            line-height: normal !important;
+            color: rgb(128, 128, 128);
+        }
         </style>
     """, unsafe_allow_html=True)
 

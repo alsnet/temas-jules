@@ -12,7 +12,7 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openrouter/auto"
 DEFAULT_MAX_TOKENS = 500
 DEFAULT_TEMPERATURE = 0.7
-APP_TITLE = "Essência Espírita - Textos Simples"
+APP_TITLE = "Temas Espíritas"
 GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
 MAX_THEME_LENGTH = 200
 
@@ -53,7 +53,7 @@ def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int
     stream = client.chat.completions.create(
         extra_headers={
             "HTTP-Referer": GITHUB_URL,
-            "X-OpenRouter-Title": "Essencia Espirita App",
+            "X-OpenRouter-Title": "Temas Espiritas App",
         },
         model=model,
         messages=[
@@ -78,58 +78,77 @@ def map_api_error(e: Exception) -> str:
     return "Ocorreu um erro inesperado ao gerar o texto. Tente novamente mais tarde."
 
 
+def render_settings() -> dict:
+    with st.popover("⚙️ Configurações", use_container_width=True):
+        st.markdown("##### Modelo")
+        model = st.selectbox(
+            "Modelo de IA",
+            options=[
+                "openrouter/auto",
+                "openai/gpt-4o-mini",
+                "openai/gpt-4o",
+                "anthropic/claude-sonnet",
+                "google/gemini-flash",
+            ],
+            index=0,
+            label_visibility="collapsed",
+            help="Modelo de IA usado para gerar o texto.",
+        )
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            temperature = st.slider(
+                "Temperatura", 0.0, 2.0, DEFAULT_TEMPERATURE, 0.1,
+                help="Valores mais altos geram textos mais criativos.",
+            )
+        with col_b:
+            max_tokens = st.slider(
+                "Máximo de tokens", 100, 2000, DEFAULT_MAX_TOKENS, 50,
+                help="Controla o tamanho máximo do texto gerado.",
+            )
+
+        st.markdown("##### API")
+        api_key = st.text_input(
+            "OpenRouter API Key",
+            type="password",
+            value=os.getenv("OPENROUTER_API_KEY", ""),
+            help="Sua chave de API do OpenRouter.",
+        )
+
+        with st.expander("Avançado"):
+            base_url = st.text_input(
+                "URL da API",
+                value=os.getenv("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL),
+                help="URL base para APIs compatíveis com OpenAI.",
+            )
+
+    return {
+        "api_key": api_key,
+        "model": model,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "base_url": base_url,
+    }
+
+
 def main() -> None:
     st.set_page_config(page_title=APP_TITLE, page_icon="🕊️")
 
-    st.title("🕊️ Essência Espírita")
-    st.subheader("Textos resumidos com vocabulário simples e baseados na Doutrina Kardecista")
+    st.title("🕊️ Temas Espíritas")
+    st.subheader("Gerador de textos resumidos com vocabulário simples, baseados na Doutrina Kardecista")
 
-    st.sidebar.header("Configuração")
+    config = render_settings()
 
-    api_key = st.sidebar.text_input(
-        "Insira sua OpenRouter API Key",
-        type="password",
-        value=os.getenv("OPENROUTER_API_KEY", ""),
-    )
-
-    if not api_key:
-        st.info("Por favor, insira sua OpenRouter API Key na barra lateral para começar.", icon="🔑")
+    if not config["api_key"]:
+        st.info("🔑 Abra as **Configurações** acima e insira sua chave do OpenRouter para começar.")
         st.stop()
 
-    model = st.sidebar.selectbox(
-        "Modelo",
-        options=[
-            "openrouter/auto",
-            "openai/gpt-4o-mini",
-            "openai/gpt-4o",
-            "anthropic/claude-sonnet",
-            "google/gemini-flash",
-        ],
-        index=0,
-        help="Modelo de IA usado para gerar o texto espiritual.",
-    )
-
-    temperature = st.sidebar.slider(
-        "Temperatura", 0.0, 2.0, DEFAULT_TEMPERATURE, 0.1,
-        help="Valores mais altos geram textos mais criativos e imprevisíveis.",
-    )
-
-    max_tokens = st.sidebar.slider(
-        "Máximo de tokens", 100, 2000, DEFAULT_MAX_TOKENS, 50,
-        help="Controla o tamanho máximo do texto gerado.",
-    )
-
-    base_url = st.sidebar.text_input(
-        "URL da API (avançado)",
-        value=os.getenv("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL),
-        help="URL base da API compatível com OpenAI. Útil para proxies ou APIs alternativas.",
-    )
-
-    client = OpenAI(base_url=base_url, api_key=api_key)
+    client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
 
     theme_input = st.text_input(
-        "Sobre qual tema você gostaria de ler hoje?",
+        "Tema",
         placeholder="Ex: Reencarnação, Lei de Causa e Efeito, Prece...",
+        label_visibility="collapsed",
     )
 
     if "generating" not in st.session_state:
@@ -141,72 +160,73 @@ def main() -> None:
     if warning:
         st.warning(warning)
 
-    if st.button("Gerar Texto", disabled=st.session_state.generating):
-        if not theme:
-            st.warning("Por favor, digite um tema.")
-        else:
-            st.session_state.generating = True
-            try:
-                cache_key = theme.lower().strip()
-                if cache_key in st.session_state.cache:
-                    st.markdown("---")
-                    st.markdown(f"### {theme}")
-                    st.write(st.session_state.cache[cache_key])
-                    st.info("📋 Resultado do cache (mesmo tema consultado anteriormente nesta sessão).")
-                else:
-                    st.markdown("---")
-                    st.markdown(f"### {theme}")
+    col_btn, _ = st.columns([1, 3])
+    with col_btn:
+        clicked = st.button("Gerar Texto", disabled=st.session_state.generating or not theme, use_container_width=True)
 
-                    start_time = time.time()
-                    placeholder = st.empty()
-                    full_response = ""
-                    tokens_used = None
+    if clicked:
+        st.session_state.generating = True
+        try:
+            cache_key = theme.lower().strip()
+            if cache_key in st.session_state.cache:
+                st.markdown("---")
+                st.markdown(f"### {theme}")
+                st.write(st.session_state.cache[cache_key])
+                st.info("📋 Resultado do cache (mesmo tema consultado anteriormente nesta sessão).")
+            else:
+                st.markdown("---")
+                st.markdown(f"### {theme}")
 
-                    stream = client.chat.completions.create(
-                        extra_headers={
-                            "HTTP-Referer": GITHUB_URL,
-                            "X-OpenRouter-Title": "Essencia Espirita App",
-                        },
-                        model=model,
-                        messages=[
-                            {"role": "system", "content": build_system_prompt()},
-                            {"role": "user", "content": f"Escreva um texto resumido sobre: {theme}"}
-                        ],
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                        stream=True,
-                        stream_options={"include_usage": True},
-                    )
+                start_time = time.time()
+                placeholder = st.empty()
+                full_response = ""
+                tokens_used = None
 
-                    for chunk in stream:
-                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                            full_response += chunk.choices[0].delta.content
-                            placeholder.markdown(full_response + "▌")
-                        if hasattr(chunk, "usage") and chunk.usage:
-                            tokens_used = chunk.usage
-
-                    placeholder.markdown(full_response)
-                    st.session_state.cache[cache_key] = full_response
-
-                    elapsed = time.time() - start_time
-                    parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
-                    if tokens_used:
-                        parts.append(f"Tokens: {tokens_used.total_tokens}")
-                    st.caption(" | ".join(parts))
-
-                safe_name = sanitize_filename(theme) or "texto"
-                st.download_button(
-                    label="Baixar texto (Arquivo TXT)",
-                    data=st.session_state.cache[cache_key],
-                    file_name=f"essencia_espirita_{safe_name}.txt",
-                    mime="text/plain",
+                stream = client.chat.completions.create(
+                    extra_headers={
+                        "HTTP-Referer": GITHUB_URL,
+                        "X-OpenRouter-Title": "Temas Espiritas App",
+                    },
+                    model=config["model"],
+                    messages=[
+                        {"role": "system", "content": build_system_prompt()},
+                        {"role": "user", "content": f"Escreva um texto resumido sobre: {theme}"}
+                    ],
+                    max_tokens=config["max_tokens"],
+                    temperature=config["temperature"],
+                    stream=True,
+                    stream_options={"include_usage": True},
                 )
 
-            except Exception as e:
-                logger.error(f"Erro ao gerar texto para tema '{theme}': {e}", exc_info=True)
-                st.error(map_api_error(e))
-            finally:
-                st.session_state.generating = False
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                        full_response += chunk.choices[0].delta.content
+                        placeholder.markdown(full_response + "▌")
+                    if hasattr(chunk, "usage") and chunk.usage:
+                        tokens_used = chunk.usage
+
+                placeholder.markdown(full_response)
+                st.session_state.cache[cache_key] = full_response
+
+                elapsed = time.time() - start_time
+                parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
+                if tokens_used:
+                    parts.append(f"Tokens: {tokens_used.total_tokens}")
+                st.caption(" | ".join(parts))
+
+            safe_name = sanitize_filename(theme) or "texto"
+            st.download_button(
+                label="Baixar texto (Arquivo TXT)",
+                data=st.session_state.cache[cache_key],
+                file_name=f"temas_espiritas_{safe_name}.txt",
+                mime="text/plain",
+            )
+
+        except Exception as e:
+            logger.error(f"Erro ao gerar texto para tema '{theme}': {e}", exc_info=True)
+            st.error(map_api_error(e))
+        finally:
+            st.session_state.generating = False
 
     st.markdown("---")
     st.caption("Desenvolvido para estudo e divulgação da Doutrina Espírita Kardecista via OpenRouter.")

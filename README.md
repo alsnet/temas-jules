@@ -1,4 +1,4 @@
-# 🕊️ Essência Espírita - Gerador de Textos Simples
+# 🕊️ Temas Espíritas - Gerador de Textos Simples
 
 Aplicação web que gera textos resumidos com vocabulário simples, baseados exclusivamente na **Doutrina Espírita Kardecista** (obras de Allan Kardec), utilizando IA via OpenRouter.
 
@@ -7,12 +7,14 @@ Aplicação web que gera textos resumidos com vocabulário simples, baseados exc
 - Geração de textos espíritas sobre temas definidos pelo usuário
 - Streaming da resposta em tempo real
 - Cache de consultas repetidas na mesma sessão
+- Configurações ocultas em menu popover (modelo, temperatura, tokens, chave API)
 - Seleção de modelo de IA (`openrouter/auto`, `GPT-4o`, `Claude Sonnet`, `Gemini Flash`)
 - Controle de temperatura (criatividade) e limite de tokens
 - URL da API configurável (útil para proxies ou APIs alternativas)
 - Timer de execução e contagem de tokens
 - Download do texto gerado em arquivo `.txt`
 - Validação e sanitização de entrada
+- Interface limpa — configurações ocultas em menu popover
 
 ## Tech Stack
 
@@ -64,12 +66,12 @@ OPENROUTER_API_KEY=sk-or-v1-sua-chave-aqui
 python -m streamlit run app.py
 ```
 
-O aplicativo abrirá em `http://localhost:8501`. Insira sua chave da OpenRouter na barra lateral e comece a usar.
+O aplicativo abrirá em `http://localhost:8501`. Clique no botão **⚙️ Configurações** para inserir sua chave da OpenRouter e ajustar parâmetros.
 
 ## Uso
 
 1. Digite um tema espiritual (ex: "Reencarnação", "Lei de Causa e Efeito", "Prece")
-2. Ajuste modelo, temperatura e tokens na barra lateral (opcional)
+2. Ajuste modelo, temperatura e tokens no menu **⚙️ Configurações** (opcional)
 3. Clique em **Gerar Texto**
 4. O texto aparecerá em tempo real com streaming
 5. Faça o download em `.txt` se desejar

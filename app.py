@@ -194,9 +194,8 @@ def main() -> None:
     client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
 
     theme_input = st.text_input(
-        "Tema",
+        "Digite o tema espiritual desejado",
         placeholder="Ex: Reencarnação, Lei de Causa e Efeito, Prece...",
-        label_visibility="collapsed",
     )
 
     if "generating" not in st.session_state:

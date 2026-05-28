@@ -2,6 +2,7 @@ import streamlit as st
 from openai import OpenAI
 import os
 import re
+import time
 import logging
 from dotenv import load_dotenv
 
@@ -33,8 +34,8 @@ def validate_theme(theme: str) -> tuple[str, str | None]:
     return theme, None
 
 
-def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int, temperature: float):
-    system_prompt = (
+def build_system_prompt() -> str:
+    return (
         "Você é um assistente especializado na Doutrina Espírita Kardecista. "
         "Sua tarefa é criar textos resumidos sobre o tema fornecido pelo usuário. "
         "REGRAS IMPORTANTES:\n"
@@ -45,6 +46,10 @@ def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int
         "5. Não utilize termos complexos sem explicá-los de forma simples.\n"
         "6. Mantenha um tom acolhedor e esclarecedor."
     )
+
+
+def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int, temperature: float):
+    system_prompt = build_system_prompt()
     stream = client.chat.completions.create(
         extra_headers={
             "HTTP-Referer": GITHUB_URL,
@@ -80,6 +85,7 @@ def main() -> None:
     st.subheader("Textos resumidos com vocabulário simples e baseados na Doutrina Kardecista")
 
     st.sidebar.header("Configuração")
+
     api_key = st.sidebar.text_input(
         "Insira sua OpenRouter API Key",
         type="password",
@@ -90,7 +96,36 @@ def main() -> None:
         st.info("Por favor, insira sua OpenRouter API Key na barra lateral para começar.", icon="🔑")
         st.stop()
 
-    client = OpenAI(base_url=OPENROUTER_BASE_URL, api_key=api_key)
+    model = st.sidebar.selectbox(
+        "Modelo",
+        options=[
+            "openrouter/auto",
+            "openai/gpt-4o-mini",
+            "openai/gpt-4o",
+            "anthropic/claude-sonnet",
+            "google/gemini-flash",
+        ],
+        index=0,
+        help="Modelo de IA usado para gerar o texto espiritual.",
+    )
+
+    temperature = st.sidebar.slider(
+        "Temperatura", 0.0, 2.0, DEFAULT_TEMPERATURE, 0.1,
+        help="Valores mais altos geram textos mais criativos e imprevisíveis.",
+    )
+
+    max_tokens = st.sidebar.slider(
+        "Máximo de tokens", 100, 2000, DEFAULT_MAX_TOKENS, 50,
+        help="Controla o tamanho máximo do texto gerado.",
+    )
+
+    base_url = st.sidebar.text_input(
+        "URL da API (avançado)",
+        value=os.getenv("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL),
+        help="URL base da API compatível com OpenAI. Útil para proxies ou APIs alternativas.",
+    )
+
+    client = OpenAI(base_url=base_url, api_key=api_key)
 
     theme_input = st.text_input(
         "Sobre qual tema você gostaria de ler hoje?",
@@ -121,10 +156,43 @@ def main() -> None:
                 else:
                     st.markdown("---")
                     st.markdown(f"### {theme}")
-                    full_response = st.write_stream(
-                        generate_text_stream(client, theme, DEFAULT_MODEL, DEFAULT_MAX_TOKENS, DEFAULT_TEMPERATURE)
+
+                    start_time = time.time()
+                    placeholder = st.empty()
+                    full_response = ""
+                    tokens_used = None
+
+                    stream = client.chat.completions.create(
+                        extra_headers={
+                            "HTTP-Referer": GITHUB_URL,
+                            "X-OpenRouter-Title": "Essencia Espirita App",
+                        },
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": build_system_prompt()},
+                            {"role": "user", "content": f"Escreva um texto resumido sobre: {theme}"}
+                        ],
+                        max_tokens=max_tokens,
+                        temperature=temperature,
+                        stream=True,
+                        stream_options={"include_usage": True},
                     )
+
+                    for chunk in stream:
+                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                            full_response += chunk.choices[0].delta.content
+                            placeholder.markdown(full_response + "▌")
+                        if hasattr(chunk, "usage") and chunk.usage:
+                            tokens_used = chunk.usage
+
+                    placeholder.markdown(full_response)
                     st.session_state.cache[cache_key] = full_response
+
+                    elapsed = time.time() - start_time
+                    parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
+                    if tokens_used:
+                        parts.append(f"Tokens: {tokens_used.total_tokens}")
+                    st.caption(" | ".join(parts))
 
                 safe_name = sanitize_filename(theme) or "texto"
                 st.download_button(

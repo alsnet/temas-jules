@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, PropertyMock
 
-from app import sanitize_filename, validate_theme, map_api_error, generate_text_stream
+from app import sanitize_filename, validate_theme, map_api_error, generate_text_stream, build_provider_routing
 
 
 class TestSanitizeFilename:
@@ -198,6 +198,32 @@ class TestRateLimiting:
         finally:
             generating = False
         assert generating is False
+
+
+class TestBuildProviderRouting:
+    def test_default_strategy_returns_none(self):
+        result = build_provider_routing("Padrão (balanceamento por preço)", True)
+        assert result is None
+
+    def test_price_sort(self):
+        result = build_provider_routing("Menor preço", True)
+        assert result == {"sort": "price"}
+
+    def test_throughput_sort(self):
+        result = build_provider_routing("Maior throughput", True)
+        assert result == {"sort": "throughput"}
+
+    def test_latency_sort(self):
+        result = build_provider_routing("Menor latência", True)
+        assert result == {"sort": "latency"}
+
+    def test_fallbacks_disabled(self):
+        result = build_provider_routing("Menor preço", False)
+        assert result == {"sort": "price", "allow_fallbacks": False}
+
+    def test_fallbacks_enabled_not_in_result_when_true(self):
+        result = build_provider_routing("Menor preço", True)
+        assert "allow_fallbacks" not in result
 
 
 # --- helpers ---

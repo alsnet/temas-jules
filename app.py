@@ -48,13 +48,30 @@ def build_system_prompt() -> str:
     )
 
 
-def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int, temperature: float):
+def build_provider_routing(strategy: str, allow_fallbacks: bool) -> dict | None:
+    sort_map = {
+        "Menor preço": "price",
+        "Maior throughput": "throughput",
+        "Menor latência": "latency",
+    }
+    sort_val = sort_map.get(strategy)
+    if not sort_val:
+        return None
+    result: dict = {"sort": sort_val}
+    if not allow_fallbacks:
+        result["allow_fallbacks"] = False
+    return result
+
+
+def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int, temperature: float, provider_routing: dict | None = None):
     system_prompt = build_system_prompt()
+    extra_body = {"provider": provider_routing} if provider_routing else None
     stream = client.chat.completions.create(
         extra_headers={
             "HTTP-Referer": GITHUB_URL,
             "X-OpenRouter-Title": "Temas Espiritas App",
         },
+        extra_body=extra_body,
         model=model,
         messages=[
             {"role": "system", "content": system_prompt},
@@ -122,12 +139,33 @@ def render_settings() -> dict:
                 help="URL base para APIs compatíveis com OpenAI.",
             )
 
+            st.markdown("##### Roteamento OpenRouter")
+            routing_strategy = st.selectbox(
+                "Estratégia",
+                options=[
+                    "Padrão (balanceamento por preço)",
+                    "Menor preço",
+                    "Maior throughput",
+                    "Menor latência",
+                ],
+                index=0,
+                help="Como o OpenRouter seleciona o provedor para sua requisição.",
+            )
+
+            allow_fallbacks = st.checkbox(
+                "Permite fallbacks",
+                value=True,
+                help="Se desativado, usa apenas o melhor provedor sem tentar alternativas.",
+            )
+
     return {
         "api_key": api_key,
         "model": model,
         "temperature": temperature,
         "max_tokens": max_tokens,
         "base_url": base_url,
+        "routing_strategy": routing_strategy,
+        "allow_fallbacks": allow_fallbacks,
     }
 
 
@@ -182,11 +220,15 @@ def main() -> None:
                 full_response = ""
                 tokens_used = None
 
+                provider_routing = build_provider_routing(config["routing_strategy"], config["allow_fallbacks"])
+                extra_body = {"provider": provider_routing} if provider_routing else None
+
                 stream = client.chat.completions.create(
                     extra_headers={
                         "HTTP-Referer": GITHUB_URL,
                         "X-OpenRouter-Title": "Temas Espiritas App",
                     },
+                    extra_body=extra_body,
                     model=config["model"],
                     messages=[
                         {"role": "system", "content": build_system_prompt()},

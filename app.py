@@ -12,7 +12,7 @@ OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openrouter/auto"
 DEFAULT_MAX_TOKENS = 500
 DEFAULT_TEMPERATURE = 0.7
-APP_TITLE = "Temas Espíritas"
+APP_TITLE = "Estudos Doutrinários"
 GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
 MAX_THEME_LENGTH = 200
 
@@ -192,7 +192,7 @@ def main() -> None:
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🕊️ Temas Espíritas")
+    st.title("🕊️ Estudos Doutrinários")
     st.subheader("Gerador de textos resumidos com vocabulário simples, baseados na Doutrina Kardecista")
 
     config = render_settings()

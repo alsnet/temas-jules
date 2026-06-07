@@ -193,7 +193,7 @@ def main() -> None:
     """, unsafe_allow_html=True)
 
     st.title("🕊️ Estudos Doutrinários")
-    st.subheader("Gerador de textos resumidos com vocabulário simples, baseados na Doutrina Kardecista")
+    st.subheader("Geramos explicações de textos para ter auxiliar em estudos e reflexões")
 
     config = render_settings()
 

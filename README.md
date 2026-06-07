@@ -1,10 +1,10 @@
 # 🕊️ Estudos Doutrinários - Gerador de Textos Simples
 
-Aplicação web que gera textos resumidos com vocabulário simples, baseados exclusivamente na **Doutrina Espírita Kardecista** (obras de Allan Kardec), utilizando IA via OpenRouter.
+Aplicação web que gera explicações de textos para ter auxiliar em estudos e reflexões, baseados exclusivamente na **Doutrina Espírita Kardecista** (obras de Allan Kardec), utilizando IA via OpenRouter.
 
 ## Funcionalidades
 
-- Geração de textos doutrinários sobre temas definidos pelo usuário
+- Geração de explicações de textos para auxiliar em estudos e reflexões
 - Streaming da resposta em tempo real
 - Cache de consultas repetidas na mesma sessão
 - Configurações ocultas em menu popover (modelo, temperatura, tokens, chave API)

@@ -203,7 +203,7 @@ def main() -> None:
     
     # Exibindo configurações no sidebar
     st.sidebar.markdown("---")
-    st.sidebar.subheader("⚙️ Configurações")
+    st.sidebar.subheader("Configuração")
     config = render_settings()
 
     saved_key = os.getenv("OPENROUTER_API_KEY", "")

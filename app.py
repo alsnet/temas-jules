@@ -17,9 +17,11 @@ GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
 MAX_THEME_LENGTH = 200
 
 FREE_MODELS = [
+    "google/gemini-2.5-pro-exp-03-25:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "openai/gpt-oss-120b:free",
     "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-3-ultra:free",
     "google/gemma-4-31b-it:free",
     "qwen/qwen3-coder:free",
     "z-ai/glm-4.5-air:free",
@@ -28,9 +30,10 @@ FREE_MODELS = [
     "poolside/laguna-xs.2:free",
     "nvidia/nemotron-3-nano-30b-a3b:free",
     "google/gemma-4-26b-a4b-it:free",
+    "meta-llama/llama-4-maverick:free",
 ]
 
-DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
+DEFAULT_MODEL = "google/gemini-2.5-pro-exp-03-25:free"
 
 SAFETY_FILTER_PATTERNS = [
     "user safety",

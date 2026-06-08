@@ -9,12 +9,27 @@ from dotenv import load_dotenv, set_key
 load_dotenv()
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "openrouter/auto"
+DEFAULT_MODEL = "openrouter/free"
 DEFAULT_MAX_TOKENS = 500
 DEFAULT_TEMPERATURE = 0.7
 APP_TITLE = "Estudos Doutrinários"
 GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
 MAX_THEME_LENGTH = 200
+
+FREE_MODELS = [
+    "openrouter/free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-120b:free",
+    "qwen/qwen3-coder:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-4-26b-a4b-it:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "z-ai/glm-4.5-air:free",
+    "moonshotai/kimi-k2.6:free",
+    "poolside/laguna-m.1:free",
+    "poolside/laguna-xs.2:free",
+]
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -102,16 +117,10 @@ def render_settings_page() -> dict:
     st.markdown("##### Modelo")
     model = st.selectbox(
         "Modelo de IA",
-        options=[
-            "openrouter/auto",
-            "openai/gpt-4o-mini",
-            "openai/gpt-4o",
-            "anthropic/claude-sonnet",
-            "google/gemini-flash",
-        ],
+        options=FREE_MODELS,
         index=0,
         label_visibility="collapsed",
-        help="Modelo de IA usado para gerar o texto.",
+        help="Modelo gratuito do OpenRouter usado para gerar o texto.",
     )
 
     col_a, col_b = st.columns(2)
@@ -236,7 +245,7 @@ def main() -> None:
         os.environ["OPENROUTER_API_KEY"] = config["api_key"]
 
     if not config["api_key"]:
-        st.info("🔑 Acesse **Configurações** no menu lateral para inserir sua chave do OpenRouter.")
+        st.info("🔑 Acesse **Configurações** no menu lateral para inserir sua chave do OpenRouter. Apenas modelos gratuitos são utilizados.")
         st.stop()
 
     client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])

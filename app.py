@@ -33,7 +33,7 @@ FREE_MODELS = [
     "meta-llama/llama-4-maverick:free",
 ]
 
-DEFAULT_MODEL = "google/gemini-2.5-pro-exp-03-25:free"
+DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 SAFETY_FILTER_PATTERNS = [
     "user safety",
@@ -108,14 +108,18 @@ def build_questionnaire_prompt(book: str, author: str, chapters: str) -> str:
     )
 
 
-def build_study_prompt(book: str, author: str, chapters: str) -> str:
+def build_study_prompt(book: str, author: str, chapters: str, chapter_names: str = "") -> str:
+    chapter_info = f"capítulos: {chapters}"
+    if chapter_names and chapter_names.strip():
+        chapter_info = f"capítulos: {chapters}\nNomes dos capítulos fornecidos pelo usuário:\n{chapter_names}"
+    
     return (
         f"Você é um assistente especializado na Doutrina Espírita Kardecista. "
-        f"O usuário está estudando o livro '{book}' de {author}, capítulos: {chapters}. "
+        f"O usuário está estudando o livro '{book}' de {author}, {chapter_info}. "
         f"REGRAS IMPORTANTES:\n"
-        f"1. Primeiro, VERIFIQUE e CORRIJA os nomes dos capítulos com base no livro '{book}' de {author}. "
-        f"Se os números dos capítulos estiverem errados, use os corretos. Se não encontrar o livro, use os números fornecidos.\n"
-        f"2. Ao iniciar a resposta, mostre os nomes REAIS dos capítulos que serão estudados (ex: 'Capítulo 29: Nome Real do Capítulo').\n"
+        f"1. Use os nomes dos capítulos FORNECIDOS PELO USUÁRIO se estiverem disponíveis. "
+        f"Caso contrário, gere um estudo baseado apenas nos números dos capítulos.\n"
+        f"2. Ao iniciar a resposta, mostre os nomes dos capítulos que serão estudados (ex: 'Capítulo 29: Nome do Capítulo').\n"
         f"3. Gere um texto APROFUNDADO e DETALHADO sobre o conteúdo dos capítulos indicados.\n"
         f"4. Baseie-se EXCLUSIVAMENTE na doutrina espírita kardecista e no livro '{book}' de {author}.\n"
         f"5. Escreva EM PRIMEIRA PESSOA, como se você estivesse ministrando uma aula sobre o assunto.\n"
@@ -609,16 +613,22 @@ def main() -> None:
             st.markdown(f"**Autor:** {st.session_state.study_author}")
 
             chapters_list = [c.strip() for c in st.session_state.study_chapters.split(",") if c.strip()]
+            chapter_names_list = [n.strip() for n in st.session_state.get("study_chapter_names", "").split("\n") if n.strip()] if st.session_state.get("study_chapter_names") else []
+            
             st.markdown("**Capítulos a serem estudados:**")
-            for ch in chapters_list:
-                st.markdown(f"- Capítulo {ch}")
+            for i, ch in enumerate(chapters_list):
+                if i < len(chapter_names_list):
+                    st.markdown(f"- Capítulo {ch}: {chapter_names_list[i]}")
+                else:
+                    st.markdown(f"- Capítulo {ch}")
 
             st.markdown("---")
 
             system_prompt = build_study_prompt(
                 st.session_state.study_book,
                 st.session_state.study_author,
-                st.session_state.study_chapters
+                st.session_state.study_chapters,
+                st.session_state.get("study_chapter_names", "")
             )
 
             st.info(f"📖 Estudando {len(chapters_list)} capítulo(s) de '{st.session_state.study_book}'...")
@@ -673,6 +683,12 @@ def main() -> None:
                 value=st.session_state.get("study_chapters", ""),
                 placeholder="Ex: 1, 3, 5, 10",
             )
+            chapter_names = st.text_area(
+                "Nomes dos capítulos (opcional - um por linha ou separados por vírgula)",
+                value=st.session_state.get("study_chapter_names", ""),
+                placeholder="Ex: Capítulo 29: Os Médiuns Medicinais\nCapítulo 30: Curas Espirituais",
+                height=100,
+            )
 
             if st.button("Gerar Estudo Literal", use_container_width=True, type="primary"):
                 if not book or not author or not chapters:
@@ -681,6 +697,7 @@ def main() -> None:
                     st.session_state.study_book = book
                     st.session_state.study_author = author
                     st.session_state.study_chapters = chapters
+                    st.session_state.study_chapter_names = chapter_names
                     st.session_state.study_processing = True
                     st.session_state.study_result = None
                     st.rerun()

@@ -173,6 +173,8 @@ def render_settings_page() -> dict:
             help="Se desativado, usa apenas o melhor provedor sem tentar alternativas.",
         )
 
+    st.info("💡 As configurações são salvas automaticamente e aplicadas ao voltar para as outras páginas.")
+
     return {
         "api_key": api_key,
         "model": model,
@@ -221,7 +223,6 @@ def main() -> None:
             os.environ["OPENROUTER_API_KEY"] = config["api_key"]
 
         st.session_state.config = config
-        st.success("Configurações salvas com sucesso!")
         return
 
     # Para as outras páginas, usar configurações salvas ou defaults

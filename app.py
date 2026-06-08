@@ -192,9 +192,18 @@ def main() -> None:
         </style>
     """, unsafe_allow_html=True)
 
-    st.title("🕊️ Estudos Doutrinários")
-    st.subheader("Geramos explicações de textos para ter auxiliar em estudos e reflexões")
-
+    # Criando o menu lateral
+    st.sidebar.title("Navegação")
+    
+    # Menu com as três opções
+    menu_option = st.sidebar.radio(
+        "Escolha uma opção:",
+        ["Temas", "Questionário", "Estudo Literal"]
+    )
+    
+    # Exibindo configurações no sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("⚙️ Configurações")
     config = render_settings()
 
     saved_key = os.getenv("OPENROUTER_API_KEY", "")
@@ -208,94 +217,109 @@ def main() -> None:
 
     client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
 
-    theme_input = st.text_input(
-        "Digite o tema espiritual desejado",
-        placeholder="Ex: Reencarnação, Lei de Causa e Efeito, Prece...",
-    )
+    # Lógica baseada na opção selecionada no menu
+    if menu_option == "Temas":
+        st.title("🕊️ Estudos Doutrinários")
+        st.subheader("Geramos explicações de textos para ter auxiliar em estudos e reflexões")
+        
+        theme_input = st.text_input(
+            "Digite o tema espiritual desejado",
+            placeholder="Ex: Reencarnação, Lei de Causa e Efeito, Prece...",
+        )
 
-    if "generating" not in st.session_state:
-        st.session_state.generating = False
-    if "cache" not in st.session_state:
-        st.session_state.cache = {}
+        if "generating" not in st.session_state:
+            st.session_state.generating = False
+        if "cache" not in st.session_state:
+            st.session_state.cache = {}
 
-    theme, warning = validate_theme(theme_input) if theme_input else ("", None)
-    if warning:
-        st.warning(warning)
+        theme, warning = validate_theme(theme_input) if theme_input else ("", None)
+        if warning:
+            st.warning(warning)
 
-    col_btn, _ = st.columns([1, 3])
-    with col_btn:
-        clicked = st.button("Gerar Texto", disabled=st.session_state.generating or not theme, use_container_width=True)
+        col_btn, _ = st.columns([1, 3])
+        with col_btn:
+            clicked = st.button("Gerar Texto", disabled=st.session_state.generating or not theme, use_container_width=True)
 
-    if clicked:
-        st.session_state.generating = True
-        try:
-            cache_key = theme.lower().strip()
-            if cache_key in st.session_state.cache:
-                st.markdown("---")
-                st.markdown(f"### {theme}")
-                st.write(st.session_state.cache[cache_key])
-                st.info("📋 Resultado do cache (mesmo tema consultado anteriormente nesta sessão).")
-            else:
-                st.markdown("---")
-                st.markdown(f"### {theme}")
+        if clicked:
+            st.session_state.generating = True
+            try:
+                cache_key = theme.lower().strip()
+                if cache_key in st.session_state.cache:
+                    st.markdown("---")
+                    st.markdown(f"### {theme}")
+                    st.write(st.session_state.cache[cache_key])
+                    st.info("📋 Resultado do cache (mesmo tema consultado anteriormente nesta sessão).")
+                else:
+                    st.markdown("---")
+                    st.markdown(f"### {theme}")
 
-                start_time = time.time()
-                placeholder = st.empty()
-                full_response = ""
-                tokens_used = None
+                    start_time = time.time()
+                    placeholder = st.empty()
+                    full_response = ""
+                    tokens_used = None
 
-                provider_routing = build_provider_routing(config["routing_strategy"], config["allow_fallbacks"])
-                extra_body = {"provider": provider_routing} if provider_routing else None
+                    provider_routing = build_provider_routing(config["routing_strategy"], config["allow_fallbacks"])
+                    extra_body = {"provider": provider_routing} if provider_routing else None
 
-                stream = client.chat.completions.create(
-                    extra_headers={
-                        "HTTP-Referer": GITHUB_URL,
-                        "X-OpenRouter-Title": "Temas Espiritas App",
-                    },
-                    extra_body=extra_body,
-                    model=config["model"],
-                    messages=[
-                        {"role": "system", "content": build_system_prompt()},
-                        {"role": "user", "content": f"Escreva um texto resumido sobre: {theme}"}
-                    ],
-                    max_tokens=config["max_tokens"],
-                    temperature=config["temperature"],
-                    stream=True,
-                    stream_options={"include_usage": True},
+                    stream = client.chat.completions.create(
+                        extra_headers={
+                            "HTTP-Referer": GITHUB_URL,
+                            "X-OpenRouter-Title": "Temas Espiritas App",
+                        },
+                        extra_body=extra_body,
+                        model=config["model"],
+                        messages=[
+                            {"role": "system", "content": build_system_prompt()},
+                            {"role": "user", "content": f"Escreva um texto resumido sobre: {theme}"}
+                        ],
+                        max_tokens=config["max_tokens"],
+                        temperature=config["temperature"],
+                        stream=True,
+                        stream_options={"include_usage": True},
+                    )
+
+                    for chunk in stream:
+                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                            full_response += chunk.choices[0].delta.content
+                            placeholder.markdown(full_response + "▌")
+                        if hasattr(chunk, "usage") and chunk.usage:
+                            tokens_used = chunk.usage
+
+                    placeholder.markdown(full_response)
+                    st.session_state.cache[cache_key] = full_response
+
+                    elapsed = time.time() - start_time
+                    parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
+                    if tokens_used:
+                        parts.append(f"Tokens: {tokens_used.total_tokens}")
+                    st.caption(" | ".join(parts))
+
+                safe_name = sanitize_filename(theme) or "texto"
+                st.download_button(
+                    label="Baixar texto (Arquivo TXT)",
+                    data=st.session_state.cache[cache_key],
+                    file_name=f"temas_espiritas_{safe_name}.txt",
+                    mime="text/plain",
                 )
 
-                for chunk in stream:
-                    if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                        full_response += chunk.choices[0].delta.content
-                        placeholder.markdown(full_response + "▌")
-                    if hasattr(chunk, "usage") and chunk.usage:
-                        tokens_used = chunk.usage
+            except Exception as e:
+                logger.error(f"Erro ao gerar texto para tema '{theme}': {e}", exc_info=True)
+                st.error(map_api_error(e))
+            finally:
+                st.session_state.generating = False
 
-                placeholder.markdown(full_response)
-                st.session_state.cache[cache_key] = full_response
-
-                elapsed = time.time() - start_time
-                parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
-                if tokens_used:
-                    parts.append(f"Tokens: {tokens_used.total_tokens}")
-                st.caption(" | ".join(parts))
-
-            safe_name = sanitize_filename(theme) or "texto"
-            st.download_button(
-                label="Baixar texto (Arquivo TXT)",
-                data=st.session_state.cache[cache_key],
-                file_name=f"temas_espiritas_{safe_name}.txt",
-                mime="text/plain",
-            )
-
-        except Exception as e:
-            logger.error(f"Erro ao gerar texto para tema '{theme}': {e}", exc_info=True)
-            st.error(map_api_error(e))
-        finally:
-            st.session_state.generating = False
-
-    st.markdown("---")
-    st.caption("Desenvolvido para estudo e divulgação da Doutrina Espírita Kardecista via OpenRouter.")
+        st.markdown("---")
+        st.caption("Desenvolvido para estudo e divulgação da Doutrina Espírita Kardecista via OpenRouter.")
+        
+    elif menu_option == "Questionário":
+        st.title("🕊️ Estudos Doutrinários")
+        st.subheader("Questionário para auxiliar no estudo")
+        st.info("Em desenvolvimento...")
+        
+    elif menu_option == "Estudo Literal":
+        st.title("🕊️ Estudos Doutrinários")
+        st.subheader("Estudo literal da doutrina")
+        st.info("Em desenvolvimento...")
 
 
 if __name__ == "__main__":

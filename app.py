@@ -4,7 +4,7 @@ import os
 import re
 import time
 import logging
-from dotenv import load_dotenv, set_key, get_key
+from dotenv import load_dotenv, set_key
 
 load_dotenv()
 
@@ -96,72 +96,73 @@ def map_api_error(e: Exception) -> str:
     return "Ocorreu um erro inesperado ao gerar o texto. Tente novamente mais tarde."
 
 
-def render_settings() -> dict:
-    with st.popover("⚙️ Configurações", use_container_width=True):
-        st.markdown("##### Modelo")
-        model = st.selectbox(
-            "Modelo de IA",
+def render_settings_page() -> dict:
+    st.title("⚙️ Configurações")
+
+    st.markdown("##### Modelo")
+    model = st.selectbox(
+        "Modelo de IA",
+        options=[
+            "openrouter/auto",
+            "openai/gpt-4o-mini",
+            "openai/gpt-4o",
+            "anthropic/claude-sonnet",
+            "google/gemini-flash",
+        ],
+        index=0,
+        label_visibility="collapsed",
+        help="Modelo de IA usado para gerar o texto.",
+    )
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        temperature = st.slider(
+            "Temperatura", 0.0, 2.0, DEFAULT_TEMPERATURE, 0.1,
+            help="Valores mais altos geram textos mais criativos.",
+        )
+    with col_b:
+        max_tokens = st.slider(
+            "Máximo de tokens", 100, 2000, DEFAULT_MAX_TOKENS, 50,
+            help="Controla o tamanho máximo do texto gerado.",
+        )
+
+    st.markdown("##### API")
+    if "api_key" not in st.session_state:
+        st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
+
+    api_key = st.text_input(
+        "OpenRouter API Key",
+        type="password",
+        value=st.session_state.api_key,
+        help="Sua chave de API do OpenRouter persistida entre sessões.",
+    )
+    st.session_state.api_key = api_key
+
+    with st.expander("Avançado"):
+        base_url = st.text_input(
+            "URL da API",
+            value=os.getenv("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL),
+            help="URL base para APIs compatíveis com OpenAI.",
+        )
+
+        st.markdown("##### Roteamento OpenRouter")
+        routing_strategy = st.selectbox(
+            "Estratégia",
             options=[
-                "openrouter/auto",
-                "openai/gpt-4o-mini",
-                "openai/gpt-4o",
-                "anthropic/claude-sonnet",
-                "google/gemini-flash",
+                "Padrão (balanceamento por preço)",
+                "Menor preço",
+                "Maior throughput",
+                "Menor latência",
             ],
             index=0,
-            label_visibility="collapsed",
-            help="Modelo de IA usado para gerar o texto.",
+            help="Como o OpenRouter seleciona o provedor para sua requisição.",
         )
 
-        col_a, col_b = st.columns(2)
-        with col_a:
-            temperature = st.slider(
-                "Temperatura", 0.0, 2.0, DEFAULT_TEMPERATURE, 0.1,
-                help="Valores mais altos geram textos mais criativos.",
-            )
-        with col_b:
-            max_tokens = st.slider(
-                "Máximo de tokens", 100, 2000, DEFAULT_MAX_TOKENS, 50,
-                help="Controla o tamanho máximo do texto gerado.",
-            )
-
-        st.markdown("##### API")
-        if "api_key" not in st.session_state:
-            st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
-
-        api_key = st.text_input(
-            "OpenRouter API Key",
-            type="password",
-            value=st.session_state.api_key,
-            help="Sua chave de API do OpenRouter persistida entre sessões.",
+        allow_fallbacks = st.checkbox(
+            "Permite fallbacks",
+            value=True,
+            help="Se desativado, usa apenas o melhor provedor sem tentar alternativas.",
         )
-        st.session_state.api_key = api_key
-
-        with st.expander("Avançado"):
-            base_url = st.text_input(
-                "URL da API",
-                value=os.getenv("OPENROUTER_BASE_URL", OPENROUTER_BASE_URL),
-                help="URL base para APIs compatíveis com OpenAI.",
-            )
-
-            st.markdown("##### Roteamento OpenRouter")
-            routing_strategy = st.selectbox(
-                "Estratégia",
-                options=[
-                    "Padrão (balanceamento por preço)",
-                    "Menor preço",
-                    "Maior throughput",
-                    "Menor latência",
-                ],
-                index=0,
-                help="Como o OpenRouter seleciona o provedor para sua requisição.",
-            )
-
-            allow_fallbacks = st.checkbox(
-                "Permite fallbacks",
-                value=True,
-                help="Se desativado, usa apenas o melhor provedor sem tentar alternativas.",
-            )
 
     return {
         "api_key": api_key,
@@ -195,35 +196,39 @@ def main() -> None:
     # Criando o menu lateral
     st.sidebar.title("Navegação")
     
-    # Menu com as três opções principais
+    # Menu com quatro opções
     menu_option = st.sidebar.radio(
         "Escolha uma opção:",
-        ["Temas", "Questionário", "Estudo Literal"]
+        ["Temas", "Questionário", "Estudo Literal", "Configurações"]
     )
-    
-    # Opção de configurações
-    config_option = st.sidebar.checkbox("Configuração")
-    
-    # Se a caixa de configurações estiver marcada, mostrar as configurações
-    if config_option:
-        st.sidebar.markdown("---")
-        st.sidebar.subheader("Configuração")
-        config = render_settings()
-    else:
-        # Usar configurações salvas se existirem
-        if "api_key" not in st.session_state:
-            st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
-        if "config" not in st.session_state:
-            st.session_state.config = {
-                "api_key": st.session_state.api_key,
-                "model": DEFAULT_MODEL,
-                "temperature": DEFAULT_TEMPERATURE,
-                "max_tokens": DEFAULT_MAX_TOKENS,
-                "base_url": OPENROUTER_BASE_URL,
-                "routing_strategy": "Padrão (balanceamento por preço)",
-                "allow_fallbacks": True
-            }
-        config = st.session_state.config
+
+    # Página de Configurações
+    if menu_option == "Configurações":
+        config = render_settings_page()
+
+        saved_key = os.getenv("OPENROUTER_API_KEY", "")
+        if config["api_key"] and config["api_key"] != saved_key:
+            set_key(".env", "OPENROUTER_API_KEY", config["api_key"])
+            os.environ["OPENROUTER_API_KEY"] = config["api_key"]
+
+        st.session_state.config = config
+        st.success("Configurações salvas com sucesso!")
+        return
+
+    # Para as outras páginas, usar configurações salvas ou defaults
+    if "api_key" not in st.session_state:
+        st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
+    if "config" not in st.session_state:
+        st.session_state.config = {
+            "api_key": st.session_state.api_key,
+            "model": DEFAULT_MODEL,
+            "temperature": DEFAULT_TEMPERATURE,
+            "max_tokens": DEFAULT_MAX_TOKENS,
+            "base_url": OPENROUTER_BASE_URL,
+            "routing_strategy": "Padrão (balanceamento por preço)",
+            "allow_fallbacks": True,
+        }
+    config = st.session_state.config
 
     saved_key = os.getenv("OPENROUTER_API_KEY", "")
     if config["api_key"] and config["api_key"] != saved_key:
@@ -231,12 +236,12 @@ def main() -> None:
         os.environ["OPENROUTER_API_KEY"] = config["api_key"]
 
     if not config["api_key"]:
-        st.info("🔑 Abra as **Configurações** acima e insira sua chave do OpenRouter para começar.")
+        st.info("🔑 Acesse **Configurações** no menu lateral para inserir sua chave do OpenRouter.")
         st.stop()
 
     client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
 
-    # Lógica baseada na opção selecionada no menu
+    # Página Temas
     if menu_option == "Temas":
         st.title("🕊️ Estudos Doutrinários")
         st.subheader("Geramos explicações de textos para ter auxiliar em estudos e reflexões")
@@ -283,7 +288,7 @@ def main() -> None:
                     stream = client.chat.completions.create(
                         extra_headers={
                             "HTTP-Referer": GITHUB_URL,
-                            "X-OpenRouter-Title": "Temas Espiritas App",
+                            "X-OpenRouter-Title": "Estudos Doutrinários",
                         },
                         extra_body=extra_body,
                         model=config["model"],
@@ -317,7 +322,7 @@ def main() -> None:
                 st.download_button(
                     label="Baixar texto (Arquivo TXT)",
                     data=st.session_state.cache[cache_key],
-                    file_name=f"temas_espiritas_{safe_name}.txt",
+                    file_name=f"estudos_doutrinarios_{safe_name}.txt",
                     mime="text/plain",
                 )
 

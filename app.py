@@ -64,6 +64,21 @@ def build_system_prompt() -> str:
     )
 
 
+def build_questionnaire_prompt(book: str, author: str, chapters: str) -> str:
+    return (
+        f"Você é um assistente especializado na Doutrina Espírita Kardecista. "
+        f"O usuário está estudando o livro '{book}' de {author}, capítulos: {chapters}. "
+        f"REGRAS IMPORTANTES:\n"
+        f"1. Responda APENAS com base no conteúdo do livro '{book}' de {author}.\n"
+        f"2. Cite sempre a referência exata do trecho ou capítulo quando possível.\n"
+        f"3. Escreva EM PRIMEIRA PESSOA, como se você estivesse explicando o conteúdo do livro.\n"
+        f"4. Seja claro, didático e objetivo.\n"
+        f"5. Inclua a explicação do contexto doutrinário quando relevante.\n"
+        f"6. Use vocabulário simples e acessível.\n"
+        f"7. Mantenha um tom acolhedor e esclarecedor."
+    )
+
+
 def build_provider_routing(strategy: str, allow_fallbacks: bool) -> dict | None:
     sort_map = {
         "Menor preço": "price",
@@ -348,7 +363,111 @@ def main() -> None:
     elif menu_option == "Questionário":
         st.title("🕊️ Estudos Doutrinários")
         st.subheader("Questionário para auxiliar no estudo")
-        st.info("Em desenvolvimento...")
+
+        with st.form("questionnaire_form"):
+            st.markdown("##### Informações do Livro")
+            col1, col2 = st.columns(2)
+            with col1:
+                book = st.text_input(
+                    "Qual livro?",
+                    placeholder="Ex: O Livro dos Espíritos, O Evangelho Segundo o Espiritismo...",
+                )
+            with col2:
+                author = st.text_input(
+                    "Qual autor?",
+                    placeholder="Ex: Allan Kardec",
+                )
+
+            chapters = st.text_input(
+                "Quais capítulos? (separados por vírgula)",
+                placeholder="Ex: 1, 3, 5, 10",
+            )
+
+            st.markdown("##### Perguntas")
+            num_questions = st.number_input(
+                "Quantas questões serão feitas?",
+                min_value=1,
+                max_value=20,
+                value=1,
+                step=1,
+            )
+
+            questions = []
+            for i in range(num_questions):
+                question = st.text_input(
+                    f"Pergunta {i + 1}",
+                    placeholder=f"Digite a pergunta {i + 1}...",
+                    key=f"question_{i}",
+                )
+                questions.append(question)
+
+            submitted = st.form_submit_button("Enviar Questionário")
+
+        if submitted:
+            if not book or not author or not chapters:
+                st.warning("⚠️ Por favor, preencha o livro, autor e capítulos.")
+            elif not any(q.strip() for q in questions):
+                st.warning("⚠️ Por favor, escreva pelo menos uma pergunta.")
+            else:
+                valid_questions = [q.strip() for q in questions if q.strip()]
+                if valid_questions:
+                    st.session_state.generating = True
+                    try:
+                        client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
+                        system_prompt = build_questionnaire_prompt(book, author, chapters)
+
+                        for i, question in enumerate(valid_questions):
+                            st.markdown("---")
+                            st.markdown(f"**Pergunta {i + 1}:** {question}")
+
+                            start_time = time.time()
+                            placeholder = st.empty()
+                            full_response = ""
+                            tokens_used = None
+
+                            provider_routing = build_provider_routing(config["routing_strategy"], config["allow_fallbacks"])
+                            extra_body = {"provider": provider_routing} if provider_routing else None
+
+                            stream = client.chat.completions.create(
+                                extra_headers={
+                                    "HTTP-Referer": GITHUB_URL,
+                                    "X-OpenRouter-Title": "Estudos Doutrinários",
+                                },
+                                extra_body=extra_body,
+                                model=config["model"],
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": question}
+                                ],
+                                max_tokens=config["max_tokens"],
+                                temperature=config["temperature"],
+                                stream=True,
+                                stream_options={"include_usage": True},
+                            )
+
+                            for chunk in stream:
+                                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                                    full_response += chunk.choices[0].delta.content
+                                    placeholder.markdown(full_response + "▌")
+                                if hasattr(chunk, "usage") and chunk.usage:
+                                    tokens_used = chunk.usage
+
+                            placeholder.markdown(full_response)
+
+                            elapsed = time.time() - start_time
+                            parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
+                            if tokens_used:
+                                parts.append(f"Tokens: {tokens_used.total_tokens}")
+                            st.caption(" | ".join(parts))
+
+                        st.markdown("---")
+                        st.success(f"✅ {len(valid_questions)} pergunta(s) respondida(s) com sucesso!")
+
+                    except Exception as e:
+                        logger.error(f"Erro ao gerar respostas do questionário: {e}", exc_info=True)
+                        st.error(map_api_error(e))
+                    finally:
+                        st.session_state.generating = False
         
     elif menu_option == "Estudo Literal":
         st.title("🕊️ Estudos Doutrinários")

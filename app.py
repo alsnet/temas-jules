@@ -201,10 +201,27 @@ def main() -> None:
         ["Temas", "Questionário", "Estudo Literal"]
     )
     
-    # Exibindo configurações no sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Configuração")
-    config = render_settings()
+    # Exibindo configurações no sidebar para a opção Questionário
+    if menu_option == "Questionário":
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("Configuração")
+        config = render_settings()
+    else:
+        # Só mostrar as configurações quando estiver na página de Questionário
+        # Se não for Questionário, usar as configurações salvas no session_state ou defaults
+        if "api_key" not in st.session_state:
+            st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
+        if "config" not in st.session_state:
+            st.session_state.config = {
+                "api_key": st.session_state.api_key,
+                "model": DEFAULT_MODEL,
+                "temperature": DEFAULT_TEMPERATURE,
+                "max_tokens": DEFAULT_MAX_TOKENS,
+                "base_url": OPENROUTER_BASE_URL,
+                "routing_strategy": "Padrão (balanceamento por preço)",
+                "allow_fallbacks": True
+            }
+        config = st.session_state.config
 
     saved_key = os.getenv("OPENROUTER_API_KEY", "")
     if config["api_key"] and config["api_key"] != saved_key:

@@ -17,19 +17,20 @@ GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
 MAX_THEME_LENGTH = 200
 
 FREE_MODELS = [
-    "openrouter/free",
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "openai/gpt-oss-120b:free",
-    "qwen/qwen3-coder:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemma-4-26b-a4b-it:free",
-    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "openai/gpt-oss-120b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-coder:free",
     "z-ai/glm-4.5-air:free",
     "moonshotai/kimi-k2.6:free",
     "poolside/laguna-m.1:free",
     "poolside/laguna-xs.2:free",
+    "nvidia/nemotron-3-nano-30b-a3b:free",
+    "google/gemma-4-26b-a4b-it:free",
 ]
+
+DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 SAFETY_FILTER_PATTERNS = [
     "user safety",
@@ -50,10 +51,10 @@ SAFETY_FILTER_PATTERNS = [
 ]
 
 FALLBACK_MODELS = [
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemma-4-31b-it:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
     "openai/gpt-oss-120b:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "google/gemma-4-31b-it:free",
+    "qwen/qwen3-coder:free",
 ]
 
 logging.basicConfig(level=logging.INFO)

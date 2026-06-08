@@ -357,87 +357,129 @@ def main() -> None:
         st.title("🕊️ Estudos Doutrinários")
         st.subheader("Questionário para auxiliar no estudo")
 
-        book = st.text_input(
-            "Qual livro?",
-            placeholder="Ex: O Livro dos Espíritos, O Evangelho Segundo o Espiritismo...",
-        )
-        author = st.text_input(
-            "Qual autor?",
-            placeholder="Ex: Allan Kardec",
-        )
-        chapters = st.text_input(
-            "Quais capítulos? (separados por vírgula)",
-            placeholder="Ex: 1, 3, 5, 10",
-        )
+        # Se já tem respostas prontas, exibir
+        if "quiz_results" in st.session_state and st.session_state.quiz_results:
+            for i, result in enumerate(st.session_state.quiz_results):
+                if i > 0:
+                    st.markdown("---")
+                st.markdown(f"**Pergunta {i + 1}:** {result['question']}")
+                st.markdown(result["answer"])
+                st.caption(f"⏱️ Gerado em {result['elapsed']:.1f}s")
 
-        num_questions = st.number_input(
-            "Quantas questões serão feitas?",
-            min_value=1,
-            max_value=20,
-            value=1,
-            step=1,
-        )
+            st.markdown("---")
+            st.success(f"✅ {len(st.session_state.quiz_results)} pergunta(s) respondida(s) com sucesso!")
 
-        questions = []
-        for i in range(num_questions):
-            question = st.text_input(
-                f"Pergunta {i + 1}",
-                placeholder=f"Digite a pergunta {i + 1}...",
-                key=f"question_{i}",
+            if st.button("Nova Consulta", use_container_width=True):
+                st.session_state.quiz_results = []
+                st.session_state.quiz_book = ""
+                st.session_state.quiz_author = ""
+                st.session_state.quiz_chapters = ""
+                st.session_state.quiz_questions = []
+                st.rerun()
+
+        # Se está processando, executar as chamadas API
+        elif st.session_state.get("quiz_processing"):
+            system_prompt = build_questionnaire_prompt(
+                st.session_state.quiz_book, st.session_state.quiz_author, st.session_state.quiz_chapters
             )
-            questions.append(question)
 
-        clicked = st.button("Enviar Questionário", use_container_width=True)
+            results = []
+            for i, question in enumerate(st.session_state.quiz_questions):
+                st.markdown("---")
+                st.markdown(f"**Pergunta {i + 1}:** {question}")
 
-        if clicked:
-            if not book or not author or not chapters:
-                st.warning("⚠️ Por favor, preencha o livro, autor e capítulos.")
-            elif not any(q.strip() for q in questions):
-                st.warning("⚠️ Por favor, escreva pelo menos uma pergunta.")
-            else:
-                valid_questions = [q.strip() for q in questions if q.strip()]
-                if valid_questions:
-                    st.session_state.generating = True
-                    try:
-                        system_prompt = build_questionnaire_prompt(book, author, chapters)
+                start_time = time.time()
+                placeholder = st.empty()
+                full_response = ""
 
-                        for i, question in enumerate(valid_questions):
-                            st.markdown("---")
-                            st.markdown(f"**Pergunta {i + 1}:** {question}")
+                try:
+                    stream = client.chat.completions.create(
+                        model=config["model"],
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": question}
+                        ],
+                        max_tokens=config["max_tokens"],
+                        temperature=config["temperature"],
+                        stream=True,
+                    )
 
-                            start_time = time.time()
-                            placeholder = st.empty()
-                            full_response = ""
+                    for chunk in stream:
+                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                            full_response += chunk.choices[0].delta.content
+                            placeholder.markdown(full_response + "▌")
 
-                            stream = client.chat.completions.create(
-                                model=config["model"],
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": question}
-                                ],
-                                max_tokens=config["max_tokens"],
-                                temperature=config["temperature"],
-                                stream=True,
-                            )
+                    placeholder.markdown(full_response)
 
-                            for chunk in stream:
-                                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                                    full_response += chunk.choices[0].delta.content
-                                    placeholder.markdown(full_response + "▌")
+                except Exception as e:
+                    logger.error(f"Erro ao gerar resposta: {e}", exc_info=True)
+                    full_response = f"Erro ao gerar resposta: {str(e)[:200]}"
+                    placeholder.error(full_response)
 
-                            placeholder.markdown(full_response)
+                elapsed = time.time() - start_time
+                st.caption(f"⏱️ Gerado em {elapsed:.1f}s")
 
-                            elapsed = time.time() - start_time
-                            st.caption(f"⏱️ Gerado em {elapsed:.1f}s")
+                results.append({
+                    "question": question,
+                    "answer": full_response,
+                    "elapsed": elapsed,
+                })
 
-                        st.markdown("---")
-                        st.success(f"✅ {len(valid_questions)} pergunta(s) respondida(s) com sucesso!")
+            st.session_state.quiz_results = results
+            st.session_state.quiz_processing = False
+            st.rerun()
 
-                    except Exception as e:
-                        logger.error(f"Erro no questionário: {e}", exc_info=True)
-                        st.error(f"Erro ao gerar resposta: {str(e)[:300]}")
-                    finally:
-                        st.session_state.generating = False
+        # Formulário de entrada
+        else:
+            book = st.text_input(
+                "Qual livro?",
+                value=st.session_state.get("quiz_book", ""),
+                placeholder="Ex: O Livro dos Espíritos, O Evangelho Segundo o Espiritismo...",
+            )
+            author = st.text_input(
+                "Qual autor?",
+                value=st.session_state.get("quiz_author", ""),
+                placeholder="Ex: Allan Kardec",
+            )
+            chapters = st.text_input(
+                "Quais capítulos? (separados por vírgula)",
+                value=st.session_state.get("quiz_chapters", ""),
+                placeholder="Ex: 1, 3, 5, 10",
+            )
+
+            num_questions = st.number_input(
+                "Quantas questões serão feitas?",
+                min_value=1,
+                max_value=20,
+                value=max(len(st.session_state.get("quiz_questions", [])), 1),
+                step=1,
+            )
+
+            questions = []
+            saved_questions = st.session_state.get("quiz_questions", [])
+            for i in range(num_questions):
+                default_val = saved_questions[i] if i < len(saved_questions) else ""
+                question = st.text_input(
+                    f"Pergunta {i + 1}",
+                    value=default_val,
+                    placeholder=f"Digite a pergunta {i + 1}...",
+                    key=f"quiz_q_{i}",
+                )
+                questions.append(question)
+
+            if st.button("Enviar Questionário", use_container_width=True):
+                if not book or not author or not chapters:
+                    st.warning("⚠️ Por favor, preencha o livro, autor e capítulos.")
+                elif not any(q.strip() for q in questions):
+                    st.warning("⚠️ Por favor, escreva pelo menos uma pergunta.")
+                else:
+                    st.session_state.quiz_book = book
+                    st.session_state.quiz_author = author
+                    st.session_state.quiz_chapters = chapters
+                    st.session_state.quiz_questions = [q.strip() for q in questions if q.strip()]
+                    st.session_state.quiz_processing = True
+                    st.session_state.quiz_results = []
+                    st.rerun()
         
     elif menu_option == "Estudo Literal":
         st.title("🕊️ Estudos Doutrinários")

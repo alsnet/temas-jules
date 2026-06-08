@@ -31,6 +31,31 @@ FREE_MODELS = [
     "poolside/laguna-xs.2:free",
 ]
 
+SAFETY_FILTER_PATTERNS = [
+    "user safety",
+    "safety filter",
+    "i cannot",
+    "i can't",
+    "i'm not able",
+    "i am not able",
+    "not appropriate",
+    "cannot assist",
+    "can't assist",
+    "not comfortable",
+    "against my guidelines",
+    "content policy",
+    "harmful",
+    "unsafe",
+    "sensitive topic",
+]
+
+FALLBACK_MODELS = [
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-4-31b-it:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "openai/gpt-oss-120b:free",
+]
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -92,6 +117,51 @@ def build_provider_routing(strategy: str, allow_fallbacks: bool) -> dict | None:
     if not allow_fallbacks:
         result["allow_fallbacks"] = False
     return result
+
+
+def is_safety_filter_response(text: str) -> bool:
+    if not text or len(text.strip()) < 20:
+        return True
+    text_lower = text.lower()
+    for pattern in SAFETY_FILTER_PATTERNS:
+        if pattern in text_lower:
+            return True
+    if text_lower.strip() in ["safe", "unsafe", "rejected", "blocked"]:
+        return True
+    return False
+
+
+def generate_with_retry(client, system_prompt, user_message, model, max_tokens, temperature):
+    models_to_try = [model] + [m for m in FALLBACK_MODELS if m != model]
+
+    for attempt, current_model in enumerate(models_to_try):
+        try:
+            stream = client.chat.completions.create(
+                model=current_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+                stream=True,
+            )
+
+            full_response = ""
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+
+            if not is_safety_filter_response(full_response):
+                return full_response, current_model
+
+            logger.warning(f"Modelo {current_model} retornou filtro de segurança. Tentando próximo...")
+
+        except Exception as e:
+            logger.error(f"Erro no modelo {current_model}: {e}")
+            continue
+
+    return None, model
 
 
 def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int, temperature: float, provider_routing: dict | None = None):
@@ -337,29 +407,21 @@ def main() -> None:
 
                     start_time = time.time()
                     placeholder = st.empty()
-                    full_response = ""
 
-                    stream = client.chat.completions.create(
-                        model=config["model"],
-                        messages=[
-                            {"role": "system", "content": build_system_prompt()},
-                            {"role": "user", "content": f"Escreva um texto resumido sobre: {theme}"}
-                        ],
-                        max_tokens=config["max_tokens"],
-                        temperature=config["temperature"],
-                        stream=True,
+                    system_prompt = build_system_prompt()
+                    user_message = f"Escreva um texto resumido sobre: {theme}"
+                    full_response, used_model = generate_with_retry(
+                        client, system_prompt, user_message,
+                        config["model"], config["max_tokens"], config["temperature"]
                     )
 
-                    for chunk in stream:
-                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                            full_response += chunk.choices[0].delta.content
-                            placeholder.markdown(full_response + "▌")
-
-                    placeholder.markdown(full_response)
-                    st.session_state.cache[cache_key] = full_response
-
-                    elapsed = time.time() - start_time
-                    st.caption(f"⏱️ Gerado em {elapsed:.1f}s")
+                    if full_response:
+                        placeholder.markdown(full_response)
+                        st.session_state.cache[cache_key] = full_response
+                        elapsed = time.time() - start_time
+                        st.caption(f"⏱️ Gerado em {elapsed:.1f}s | Modelo: {used_model}")
+                    else:
+                        placeholder.error("❌ Não foi possível gerar o texto. Todos os modelos retornaram filtro de segurança.")
 
                 safe_name = sanitize_filename(theme) or "texto"
                 st.download_button(
@@ -415,34 +477,20 @@ def main() -> None:
 
                 start_time = time.time()
                 placeholder = st.empty()
-                full_response = ""
 
-                try:
-                    stream = client.chat.completions.create(
-                        model=config["model"],
-                        messages=[
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": question}
-                        ],
-                        max_tokens=config["max_tokens"],
-                        temperature=config["temperature"],
-                        stream=True,
-                    )
+                full_response, used_model = generate_with_retry(
+                    client, system_prompt, question,
+                    config["model"], config["max_tokens"], config["temperature"]
+                )
 
-                    for chunk in stream:
-                        if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                            full_response += chunk.choices[0].delta.content
-                            placeholder.markdown(full_response + "▌")
-
+                if full_response:
                     placeholder.markdown(full_response)
-
-                except Exception as e:
-                    logger.error(f"Erro ao gerar resposta: {e}", exc_info=True)
-                    full_response = f"Erro ao gerar resposta: {str(e)[:200]}"
+                    elapsed = time.time() - start_time
+                    st.caption(f"⏱️ Gerado em {elapsed:.1f}s | Modelo: {used_model}")
+                else:
+                    full_response = "❌ Não foi possível gerar resposta. Filtro de segurança bloqueou."
                     placeholder.error(full_response)
-
-                elapsed = time.time() - start_time
-                st.caption(f"⏱️ Gerado em {elapsed:.1f}s")
+                    elapsed = time.time() - start_time
 
                 results.append({
                     "question": question,

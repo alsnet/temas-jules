@@ -425,22 +425,22 @@ def main() -> None:
                     st.markdown(f"### {theme}")
 
                     start_time = time.time()
-                    placeholder = st.empty()
 
-                    system_prompt = build_system_prompt()
-                    user_message = f"Escreva um texto resumido sobre: {theme}"
-                    full_response, used_model = generate_with_retry(
-                        client, system_prompt, user_message,
-                        config["model"], config["max_tokens"], config["temperature"]
-                    )
+                    with st.spinner("🧠 Pensando no tema..."):
+                        system_prompt = build_system_prompt()
+                        user_message = f"Escreva um texto resumido sobre: {theme}"
+                        full_response, used_model = generate_with_retry(
+                            client, system_prompt, user_message,
+                            config["model"], config["max_tokens"], config["temperature"]
+                        )
 
                     if full_response:
-                        placeholder.markdown(full_response)
+                        st.markdown(full_response)
                         st.session_state.cache[cache_key] = full_response
                         elapsed = time.time() - start_time
                         st.caption(f"⏱️ Gerado em {elapsed:.1f}s | Modelo: {used_model}")
                     else:
-                        placeholder.error("❌ Não foi possível gerar o texto. Todos os modelos retornaram filtro de segurança.")
+                        st.error("❌ Não foi possível gerar o texto. Todos os modelos retornaram filtro de segurança.")
 
                 safe_name = sanitize_filename(theme) or "texto"
                 st.download_button(
@@ -490,25 +490,26 @@ def main() -> None:
             )
 
             results = []
+            total = len(st.session_state.quiz_questions)
             for i, question in enumerate(st.session_state.quiz_questions):
                 st.markdown("---")
-                st.markdown(f"**Pergunta {i + 1}:** {question}")
+                st.markdown(f"**Pergunta {i + 1} de {total}:** {question}")
 
                 start_time = time.time()
-                placeholder = st.empty()
 
-                full_response, used_model = generate_with_retry(
-                    client, system_prompt, question,
-                    config["model"], config["max_tokens"], config["temperature"]
-                )
+                with st.spinner(f"🧠 Pensando na resposta da pergunta {i + 1}..."):
+                    full_response, used_model = generate_with_retry(
+                        client, system_prompt, question,
+                        config["model"], config["max_tokens"], config["temperature"]
+                    )
 
                 if full_response:
-                    placeholder.markdown(full_response)
+                    st.markdown(full_response)
                     elapsed = time.time() - start_time
                     st.caption(f"⏱️ Gerado em {elapsed:.1f}s | Modelo: {used_model}")
                 else:
                     full_response = "❌ Não foi possível gerar resposta. Filtro de segurança bloqueou."
-                    placeholder.error(full_response)
+                    st.error(full_response)
                     elapsed = time.time() - start_time
 
                 results.append({
@@ -603,14 +604,16 @@ def main() -> None:
                 st.session_state.study_chapters
             )
 
-            start_time = time.time()
-            placeholder = st.empty()
+            st.info(f"📖 Estudando capítulos {st.session_state.study_chapters} de '{st.session_state.study_book}'...")
 
-            full_response, used_model = generate_with_retry(
-                client, system_prompt,
-                f"Faça um estudo aprofundado dos capítulos {st.session_state.study_chapters} do livro '{st.session_state.study_book}' de {st.session_state.study_author}.",
-                config["model"], config["max_tokens"], config["temperature"]
-            )
+            start_time = time.time()
+
+            with st.spinner("📚 Preparando estudo aprofundado... Isso pode levar alguns segundos."):
+                full_response, used_model = generate_with_retry(
+                    client, system_prompt,
+                    f"Faça um estudo aprofundado dos capítulos {st.session_state.study_chapters} do livro '{st.session_state.study_book}' de {st.session_state.study_author}.",
+                    config["model"], config["max_tokens"], config["temperature"]
+                )
 
             elapsed = time.time() - start_time
 

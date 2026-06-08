@@ -119,11 +119,19 @@ def generate_text_stream(client: OpenAI, theme: str, model: str, max_tokens: int
 
 
 def map_api_error(e: Exception) -> str:
-    if "insufficient_quota" in str(e) or "429" in str(e):
+    error_str = str(e).lower()
+    if "insufficient_quota" in error_str or "429" in error_str:
         return "Erro: Limite de uso atingido ou falta de créditos no OpenRouter. Verifique sua conta."
-    if "api_key" in str(e).lower() or "401" in str(e):
+    if "api_key" in error_str or "401" in error_str:
         return "Erro: A chave da API do OpenRouter fornecida parece ser inválida."
-    return "Ocorreu um erro inesperado ao gerar o texto. Tente novamente mais tarde."
+    if "model" in error_str and ("not found" in error_str or "unavailable" in error_str):
+        return "Erro: O modelo selecionado não está disponível. Tente outro modelo gratuito."
+    if "timeout" in error_str or "timed out" in error_str:
+        return "Erro: A requisição expirou. Tente novamente mais tarde."
+    if "connection" in error_str or "connect" in error_str:
+        return "Erro: Não foi possível conectar ao OpenRouter. Verifique sua conexão."
+    logger.error(f"Erro não mapeado: {e}", exc_info=True)
+    return f"Erro: {str(e)[:200]}"
 
 
 def render_settings_page() -> dict:
@@ -305,17 +313,8 @@ def main() -> None:
                     start_time = time.time()
                     placeholder = st.empty()
                     full_response = ""
-                    tokens_used = None
-
-                    provider_routing = build_provider_routing(config["routing_strategy"], config["allow_fallbacks"])
-                    extra_body = {"provider": provider_routing} if provider_routing else None
 
                     stream = client.chat.completions.create(
-                        extra_headers={
-                            "HTTP-Referer": GITHUB_URL,
-                            "X-OpenRouter-Title": "Estudos Doutrinários",
-                        },
-                        extra_body=extra_body,
                         model=config["model"],
                         messages=[
                             {"role": "system", "content": build_system_prompt()},
@@ -324,24 +323,18 @@ def main() -> None:
                         max_tokens=config["max_tokens"],
                         temperature=config["temperature"],
                         stream=True,
-                        stream_options={"include_usage": True},
                     )
 
                     for chunk in stream:
                         if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                             full_response += chunk.choices[0].delta.content
                             placeholder.markdown(full_response + "▌")
-                        if hasattr(chunk, "usage") and chunk.usage:
-                            tokens_used = chunk.usage
 
                     placeholder.markdown(full_response)
                     st.session_state.cache[cache_key] = full_response
 
                     elapsed = time.time() - start_time
-                    parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
-                    if tokens_used:
-                        parts.append(f"Tokens: {tokens_used.total_tokens}")
-                    st.caption(" | ".join(parts))
+                    st.caption(f"⏱️ Gerado em {elapsed:.1f}s")
 
                 safe_name = sanitize_filename(theme) or "texto"
                 st.download_button(
@@ -364,46 +357,39 @@ def main() -> None:
         st.title("🕊️ Estudos Doutrinários")
         st.subheader("Questionário para auxiliar no estudo")
 
-        with st.form("questionnaire_form"):
-            st.markdown("##### Informações do Livro")
-            col1, col2 = st.columns(2)
-            with col1:
-                book = st.text_input(
-                    "Qual livro?",
-                    placeholder="Ex: O Livro dos Espíritos, O Evangelho Segundo o Espiritismo...",
-                )
-            with col2:
-                author = st.text_input(
-                    "Qual autor?",
-                    placeholder="Ex: Allan Kardec",
-                )
+        book = st.text_input(
+            "Qual livro?",
+            placeholder="Ex: O Livro dos Espíritos, O Evangelho Segundo o Espiritismo...",
+        )
+        author = st.text_input(
+            "Qual autor?",
+            placeholder="Ex: Allan Kardec",
+        )
+        chapters = st.text_input(
+            "Quais capítulos? (separados por vírgula)",
+            placeholder="Ex: 1, 3, 5, 10",
+        )
 
-            chapters = st.text_input(
-                "Quais capítulos? (separados por vírgula)",
-                placeholder="Ex: 1, 3, 5, 10",
+        num_questions = st.number_input(
+            "Quantas questões serão feitas?",
+            min_value=1,
+            max_value=20,
+            value=1,
+            step=1,
+        )
+
+        questions = []
+        for i in range(num_questions):
+            question = st.text_input(
+                f"Pergunta {i + 1}",
+                placeholder=f"Digite a pergunta {i + 1}...",
+                key=f"question_{i}",
             )
+            questions.append(question)
 
-            st.markdown("##### Perguntas")
-            num_questions = st.number_input(
-                "Quantas questões serão feitas?",
-                min_value=1,
-                max_value=20,
-                value=1,
-                step=1,
-            )
+        clicked = st.button("Enviar Questionário", use_container_width=True)
 
-            questions = []
-            for i in range(num_questions):
-                question = st.text_input(
-                    f"Pergunta {i + 1}",
-                    placeholder=f"Digite a pergunta {i + 1}...",
-                    key=f"question_{i}",
-                )
-                questions.append(question)
-
-            submitted = st.form_submit_button("Enviar Questionário")
-
-        if submitted:
+        if clicked:
             if not book or not author or not chapters:
                 st.warning("⚠️ Por favor, preencha o livro, autor e capítulos.")
             elif not any(q.strip() for q in questions):
@@ -413,7 +399,6 @@ def main() -> None:
                 if valid_questions:
                     st.session_state.generating = True
                     try:
-                        client = OpenAI(base_url=config["base_url"], api_key=config["api_key"])
                         system_prompt = build_questionnaire_prompt(book, author, chapters)
 
                         for i, question in enumerate(valid_questions):
@@ -423,17 +408,8 @@ def main() -> None:
                             start_time = time.time()
                             placeholder = st.empty()
                             full_response = ""
-                            tokens_used = None
-
-                            provider_routing = build_provider_routing(config["routing_strategy"], config["allow_fallbacks"])
-                            extra_body = {"provider": provider_routing} if provider_routing else None
 
                             stream = client.chat.completions.create(
-                                extra_headers={
-                                    "HTTP-Referer": GITHUB_URL,
-                                    "X-OpenRouter-Title": "Estudos Doutrinários",
-                                },
-                                extra_body=extra_body,
                                 model=config["model"],
                                 messages=[
                                     {"role": "system", "content": system_prompt},
@@ -442,30 +418,24 @@ def main() -> None:
                                 max_tokens=config["max_tokens"],
                                 temperature=config["temperature"],
                                 stream=True,
-                                stream_options={"include_usage": True},
                             )
 
                             for chunk in stream:
                                 if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                                     full_response += chunk.choices[0].delta.content
                                     placeholder.markdown(full_response + "▌")
-                                if hasattr(chunk, "usage") and chunk.usage:
-                                    tokens_used = chunk.usage
 
                             placeholder.markdown(full_response)
 
                             elapsed = time.time() - start_time
-                            parts = [f"⏱️ Gerado em {elapsed:.1f}s"]
-                            if tokens_used:
-                                parts.append(f"Tokens: {tokens_used.total_tokens}")
-                            st.caption(" | ".join(parts))
+                            st.caption(f"⏱️ Gerado em {elapsed:.1f}s")
 
                         st.markdown("---")
                         st.success(f"✅ {len(valid_questions)} pergunta(s) respondida(s) com sucesso!")
 
                     except Exception as e:
-                        logger.error(f"Erro ao gerar respostas do questionário: {e}", exc_info=True)
-                        st.error(map_api_error(e))
+                        logger.error(f"Erro no questionário: {e}", exc_info=True)
+                        st.error(f"Erro ao gerar resposta: {str(e)[:300]}")
                     finally:
                         st.session_state.generating = False
         

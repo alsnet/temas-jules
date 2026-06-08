@@ -10,7 +10,7 @@ load_dotenv()
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "openrouter/free"
-DEFAULT_MAX_TOKENS = 500
+DEFAULT_MAX_TOKENS = 2000
 DEFAULT_TEMPERATURE = 0.7
 APP_TITLE = "Estudos Doutrinários"
 GITHUB_URL = "https://github.com/jules-agent/spiritist-app"
@@ -154,7 +154,7 @@ def render_settings_page() -> dict:
         )
     with col_b:
         max_tokens = st.slider(
-            "Máximo de tokens", 100, 2000, DEFAULT_MAX_TOKENS, 50,
+            "Máximo de tokens", 100, 4000, DEFAULT_MAX_TOKENS, 100,
             help="Controla o tamanho máximo do texto gerado.",
         )
 
@@ -196,7 +196,39 @@ def render_settings_page() -> dict:
             help="Se desativado, usa apenas o melhor provedor sem tentar alternativas.",
         )
 
-    st.info("💡 As configurações são salvas automaticamente e aplicadas ao voltar para as outras páginas.")
+    # Botão de salvar
+    if st.button("Salvar Configurações", use_container_width=True, type="primary"):
+        new_config = {
+            "api_key": api_key,
+            "model": model,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "base_url": base_url,
+            "routing_strategy": routing_strategy,
+            "allow_fallbacks": allow_fallbacks,
+        }
+        st.session_state.config = new_config
+
+        # Salvar API key no .env
+        saved_key = os.getenv("OPENROUTER_API_KEY", "")
+        if api_key and api_key != saved_key:
+            set_key(".env", "OPENROUTER_API_KEY", api_key)
+            os.environ["OPENROUTER_API_KEY"] = api_key
+
+        st.success("✅ Configurações salvas com sucesso!")
+        st.balloons()
+
+    # Mostrar configurações atuais
+    st.markdown("---")
+    st.markdown("##### Configurações Atuais")
+    current = st.session_state.get("config", {})
+    if current:
+        st.json({
+            "Modelo": current.get("model", "N/A"),
+            "Temperatura": current.get("temperature", "N/A"),
+            "Max Tokens": current.get("max_tokens", "N/A"),
+            "API Key": "***" + current.get("api_key", "")[-4:] if current.get("api_key") else "Não configurada",
+        })
 
     return {
         "api_key": api_key,
@@ -239,13 +271,6 @@ def main() -> None:
     # Página de Configurações
     if menu_option == "Configurações":
         config = render_settings_page()
-
-        saved_key = os.getenv("OPENROUTER_API_KEY", "")
-        if config["api_key"] and config["api_key"] != saved_key:
-            set_key(".env", "OPENROUTER_API_KEY", config["api_key"])
-            os.environ["OPENROUTER_API_KEY"] = config["api_key"]
-
-        st.session_state.config = config
         return
 
     # Para as outras páginas, usar configurações salvas ou defaults

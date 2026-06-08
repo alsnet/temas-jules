@@ -354,7 +354,7 @@ def main() -> None:
     # Menu com quatro opções
     menu_option = st.sidebar.radio(
         "Escolha uma opção:",
-        ["Temas", "Questionário", "Estudo Literal", "Configurações"]
+        ["Estudo Literal", "Temas", "Questionário", "Configurações"]
     )
 
     # Página de Configurações
@@ -598,13 +598,24 @@ def main() -> None:
 
         # Se está processando
         elif st.session_state.get("study_processing"):
+            st.markdown("---")
+            st.markdown(f"### 📖 {st.session_state.study_book}")
+            st.markdown(f"**Autor:** {st.session_state.study_author}")
+
+            chapters_list = [c.strip() for c in st.session_state.study_chapters.split(",") if c.strip()]
+            st.markdown("**Capítulos a serem estudados:**")
+            for ch in chapters_list:
+                st.markdown(f"- Capítulo {ch}")
+
+            st.markdown("---")
+
             system_prompt = build_study_prompt(
                 st.session_state.study_book,
                 st.session_state.study_author,
                 st.session_state.study_chapters
             )
 
-            st.info(f"📖 Estudando capítulos {st.session_state.study_chapters} de '{st.session_state.study_book}'...")
+            st.info(f"📖 Estudando {len(chapters_list)} capítulo(s) de '{st.session_state.study_book}'...")
 
             start_time = time.time()
 

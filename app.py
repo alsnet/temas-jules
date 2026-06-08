@@ -105,6 +105,24 @@ def build_questionnaire_prompt(book: str, author: str, chapters: str) -> str:
     )
 
 
+def build_study_prompt(book: str, author: str, chapters: str) -> str:
+    return (
+        f"Você é um assistente especializado na Doutrina Espírita Kardecista. "
+        f"O usuário está estudando o livro '{book}' de {author}, capítulos: {chapters}. "
+        f"REGRAS IMPORTANTES:\n"
+        f"1. Gere um texto APROFUNDADO e DETALHADO sobre o conteúdo dos capítulos indicados.\n"
+        f"2. Baseie-se EXCLUSIVAMENTE na doutrina espírita kardecista e no livro '{book}' de {author}.\n"
+        f"3. Escreva EM PRIMEIRA PESSOA, como se você estivesse ministrando uma aula sobre o assunto.\n"
+        f"4. Cite sempre a referência exata (capítulo, página, seção) quando possível.\n"
+        f"5. Explique os conceitos de forma completa, incluindo contexto histórico e doutrinário.\n"
+        f"6. Conecte os ensinamentos com a prática espírita do dia a dia.\n"
+        f"7. Use vocabulário acessível, mas sem simplificar demais o conteúdo.\n"
+        f"8. Mantenha um tom acolhedor, educativo e esclarecedor.\n"
+        f"9. Organize o texto com tópicos, subtópicos e parágrafos bem estruturados.\n"
+        f"10. Ao final, inclua um resumo dos pontos principais abordados."
+    )
+
+
 def build_provider_routing(strategy: str, allow_fallbacks: bool) -> dict | None:
     sort_map = {
         "Menor preço": "price",
@@ -557,8 +575,95 @@ def main() -> None:
         
     elif menu_option == "Estudo Literal":
         st.title("🕊️ Estudos Doutrinários")
-        st.subheader("Estudo literal da doutrina")
-        st.info("Em desenvolvimento...")
+        st.subheader("Estudo aprofundado da doutrina")
+
+        # Se já tem resultado, exibir
+        if "study_result" in st.session_state and st.session_state.study_result:
+            result = st.session_state.study_result
+            st.markdown("---")
+            st.markdown(f"**Livro:** {result['book']} | **Autor:** {result['author']} | **Capítulos:** {result['chapters']}")
+            st.markdown(result["answer"])
+            st.caption(f"⏱️ Gerado em {result['elapsed']:.1f}s | Modelo: {result['model']}")
+
+            st.markdown("---")
+            st.success("✅ Estudo literal gerado com sucesso!")
+
+            if st.button("Nova Consulta", use_container_width=True):
+                st.session_state.study_result = None
+                st.session_state.study_book = ""
+                st.session_state.study_author = ""
+                st.session_state.study_chapters = ""
+                st.rerun()
+
+        # Se está processando
+        elif st.session_state.get("study_processing"):
+            system_prompt = build_study_prompt(
+                st.session_state.study_book,
+                st.session_state.study_author,
+                st.session_state.study_chapters
+            )
+
+            start_time = time.time()
+            placeholder = st.empty()
+
+            full_response, used_model = generate_with_retry(
+                client, system_prompt,
+                f"Faça um estudo aprofundado dos capítulos {st.session_state.study_chapters} do livro '{st.session_state.study_book}' de {st.session_state.study_author}.",
+                config["model"], config["max_tokens"], config["temperature"]
+            )
+
+            elapsed = time.time() - start_time
+
+            if full_response:
+                st.session_state.study_result = {
+                    "book": st.session_state.study_book,
+                    "author": st.session_state.study_author,
+                    "chapters": st.session_state.study_chapters,
+                    "answer": full_response,
+                    "elapsed": elapsed,
+                    "model": used_model,
+                }
+            else:
+                st.session_state.study_result = {
+                    "book": st.session_state.study_book,
+                    "author": st.session_state.study_author,
+                    "chapters": st.session_state.study_chapters,
+                    "answer": "❌ Não foi possível gerar o estudo. Todos os modelos retornaram filtro de segurança.",
+                    "elapsed": elapsed,
+                    "model": "N/A",
+                }
+
+            st.session_state.study_processing = False
+            st.rerun()
+
+        # Formulário de entrada
+        else:
+            book = st.text_input(
+                "Qual livro?",
+                value=st.session_state.get("study_book", ""),
+                placeholder="Ex: O Livro dos Espíritos, O Evangelho Segundo o Espiritismo...",
+            )
+            author = st.text_input(
+                "Qual autor?",
+                value=st.session_state.get("study_author", ""),
+                placeholder="Ex: Allan Kardec",
+            )
+            chapters = st.text_input(
+                "Quais capítulos? (separados por vírgula)",
+                value=st.session_state.get("study_chapters", ""),
+                placeholder="Ex: 1, 3, 5, 10",
+            )
+
+            if st.button("Gerar Estudo Literal", use_container_width=True, type="primary"):
+                if not book or not author or not chapters:
+                    st.warning("⚠️ Por favor, preencha o livro, autor e capítulos.")
+                else:
+                    st.session_state.study_book = book
+                    st.session_state.study_author = author
+                    st.session_state.study_chapters = chapters
+                    st.session_state.study_processing = True
+                    st.session_state.study_result = None
+                    st.rerun()
 
 
 if __name__ == "__main__":

@@ -195,16 +195,35 @@ def main() -> None:
     # Criando o menu lateral
     st.sidebar.title("Navegação")
     
-    # Menu com as três opções
+    # Menu com as três opções principais
     menu_option = st.sidebar.radio(
         "Escolha uma opção:",
         ["Temas", "Questionário", "Estudo Literal"]
     )
     
-    # Adiciona a configuração como uma opção separada no menu
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Configuração")
-    config = render_settings()
+    # Opção de configurações
+    config_option = st.sidebar.checkbox("Configuração")
+    
+    # Se a caixa de configurações estiver marcada, mostrar as configurações
+    if config_option:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("Configuração")
+        config = render_settings()
+    else:
+        # Usar configurações salvas se existirem
+        if "api_key" not in st.session_state:
+            st.session_state.api_key = os.getenv("OPENROUTER_API_KEY", "")
+        if "config" not in st.session_state:
+            st.session_state.config = {
+                "api_key": st.session_state.api_key,
+                "model": DEFAULT_MODEL,
+                "temperature": DEFAULT_TEMPERATURE,
+                "max_tokens": DEFAULT_MAX_TOKENS,
+                "base_url": OPENROUTER_BASE_URL,
+                "routing_strategy": "Padrão (balanceamento por preço)",
+                "allow_fallbacks": True
+            }
+        config = st.session_state.config
 
     saved_key = os.getenv("OPENROUTER_API_KEY", "")
     if config["api_key"] and config["api_key"] != saved_key:
